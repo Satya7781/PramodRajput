@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Calendar, MapPin, Users, Award, Newspaper, ImageIcon, Video, Trophy, Heart, Target, TrendingUp } from 'lucide-react';
+import { ArrowRight, Calendar, MapPin, Users, Award, Newspaper, ImageIcon, Video as VideoIcon, Trophy, Heart, Target, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import type { Event, News, PhotoAlbum, Video } from '@/lib/types';
 import { formatDate } from '@/lib/date-utils';
@@ -367,7 +367,7 @@ export default async function HomePage() {
               View Photos
             </Link>
             <Link href="/gallery/videos" className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-medium hover:bg-card transition-colors">
-              <Video className="h-4 w-4" />
+              <VideoIcon className="h-4 w-4" />
               Watch Videos
             </Link>
           </div>
