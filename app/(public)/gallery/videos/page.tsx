@@ -1,5 +1,4 @@
-import { Video as VideoIcon, Play } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { Video as VideoIcon } from 'lucide-react';
 import type { Video } from '@/lib/types';
 import { VideoGrid } from './video-grid';
 
@@ -8,14 +7,13 @@ export const metadata = {
   description: 'Watch videos from community events, initiatives, and outreach programs.',
 };
 
-async function getVideos() {
-  const { data } = await supabase
-    .from('videos')
-    .select('*')
-    .eq('status', 'published')
-    .order('created_at', { ascending: false });
-
-  return (data || []) as Video[];
+async function getVideos(): Promise<Video[]> {
+  try {
+    const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const res = await fetch(`${base}/api/videos`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
 }
 
 export default async function VideosPage() {

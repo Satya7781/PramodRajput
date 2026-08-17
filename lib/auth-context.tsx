@@ -1,14 +1,13 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase/client';
-import type { Profile, UserRole } from '@/lib/types';
+import { auth, setAuthToken, getAuthToken } from './api-client';
+import type { Profile, UserRole } from './types';
 
 interface AuthContextValue {
   user: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -19,94 +18,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // On mount: restore session from localStorage token
   useEffect(() => {
     let mounted = true;
-
-    const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
-
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (mounted) {
-          setUser(profile as Profile | null);
-        }
+    const token = getAuthToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    auth.me().then((profile) => {
+      if (mounted) {
+        setUser(profile);
+        setLoading(false);
       }
-      if (mounted) setLoading(false);
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      (async () => {
-        if (event === 'SIGNED_OUT' || !session?.user) {
-          if (mounted) setUser(null);
-          return;
-        }
-
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-
-          if (mounted) {
-            setUser(profile as Profile | null);
-          }
-        }
-      })();
     });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => { mounted = false; };
   }, []);
 
   const refreshProfile = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle();
-      setUser(profile as Profile | null);
+    const profile = await auth.me();
+    setUser(profile);
+  };
+
+  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    try {
+      const { user: profile } = await auth.login(email, password);
+      // Fetch full profile
+      const full = await auth.me();
+      setUser(full ?? (profile as Profile));
+      return { error: null };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Login failed' };
     }
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-    return { error: null };
-  };
-
-  const signUp = async (email: string, password: string, fullName: string, role: UserRole = 'editor') => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, role },
-      },
-    });
-    if (error) return { error: error.message };
-    if (!data.user) return { error: 'Failed to create account' };
-    return { error: null };
-  };
-
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await auth.logout();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

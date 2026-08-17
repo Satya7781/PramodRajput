@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase/client';
+import { events as eventsApi } from '@/lib/api-client';
 import type { Event } from '@/lib/types';
 import { EventForm } from '@/components/admin/event-form';
 import { ArrowLeft, Loader2, Settings2, ClipboardList, Award } from 'lucide-react';
@@ -14,15 +14,9 @@ export default function EditEventPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from('events')
-      .select('*')
-      .eq('id', id)
-      .single()
-      .then(({ data }) => {
-        setEvent(data as Event | null);
-        setLoading(false);
-      });
+    eventsApi.getById(id)
+      .then((data) => { setEvent(data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, [id]);
 
   if (loading) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { users as usersApi } from '@/lib/api-client';
 import type { Profile } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, Loader2, ShieldCheck, ShieldOff } from 'lucide-react';
@@ -9,52 +9,53 @@ import { formatDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<Profile[]>([]);
+  const [userList, setUserList] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-    setUsers((data ?? []) as Profile[]);
-    setLoading(false);
+    try {
+      const data = await usersApi.list();
+      setUserList(data);
+    } catch { toast.error('Failed to load users.'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const updateRole = async (id: string, role: 'admin' | 'editor') => {
     setUpdating(id + 'role');
-    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
-    if (error) toast.error(error.message);
-    else { toast.success('Role updated.'); fetchUsers(); }
-    setUpdating(null);
+    try {
+      await usersApi.update(id, { role });
+      toast.success('Role updated.');
+      fetchUsers();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed.'); }
+    finally { setUpdating(null); }
   };
 
   const toggleActive = async (id: string, is_active: boolean) => {
     setUpdating(id + 'active');
-    const { error } = await supabase.from('profiles').update({ is_active: !is_active }).eq('id', id);
-    if (error) toast.error(error.message);
-    else { toast.success(`User ${is_active ? 'deactivated' : 'activated'}.`); fetchUsers(); }
-    setUpdating(null);
+    try {
+      await usersApi.update(id, { is_active: !is_active });
+      toast.success(`User ${is_active ? 'deactivated' : 'activated'}.`);
+      fetchUsers();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed.'); }
+    finally { setUpdating(null); }
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Users</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage staff accounts and roles. New users are created via direct Supabase Auth invitation.
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Manage staff accounts and roles.</p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : users.length === 0 ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : userList.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
-          <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          No staff users found.
+          <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />No staff users found.
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -70,24 +71,16 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {users.map((u) => (
+                {userList.map((u) => (
                   <tr key={u.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium">{u.full_name}</p>
                       <p className="text-xs text-muted-foreground">{u.email}</p>
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                      {formatDateTime(u.created_at)}
-                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{formatDateTime(u.created_at)}</td>
                     <td className="px-4 py-3">
-                      <Select
-                        value={u.role}
-                        onValueChange={(v) => updateRole(u.id, v as 'admin' | 'editor')}
-                        disabled={updating === u.id + 'role'}
-                      >
-                        <SelectTrigger className="h-7 w-24 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
+                      <Select value={u.role} onValueChange={(v) => updateRole(u.id, v as 'admin' | 'editor')} disabled={updating === u.id + 'role'}>
+                        <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="admin">Admin</SelectItem>
                           <SelectItem value="editor">Editor</SelectItem>
@@ -95,9 +88,7 @@ export default function UsersPage() {
                       </Select>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        u.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
-                      }`}>
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
                         {u.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -106,18 +97,12 @@ export default function UsersPage() {
                         <button
                           onClick={() => toggleActive(u.id, u.is_active)}
                           disabled={updating === u.id + 'active'}
-                          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-                            u.is_active
-                              ? 'hover:bg-red-100 hover:text-red-700'
-                              : 'hover:bg-green-100 hover:text-green-700'
-                          }`}
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${u.is_active ? 'hover:bg-red-100 hover:text-red-700' : 'hover:bg-green-100 hover:text-green-700'}`}
                           title={u.is_active ? 'Deactivate' : 'Activate'}
                         >
                           {updating === u.id + 'active'
                             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : u.is_active
-                              ? <ShieldOff className="h-3.5 w-3.5" />
-                              : <ShieldCheck className="h-3.5 w-3.5" />}
+                            : u.is_active ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                         </button>
                       </div>
                     </td>

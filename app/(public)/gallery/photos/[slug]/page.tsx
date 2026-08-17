@@ -1,43 +1,30 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ImageIcon } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
 import type { PhotoAlbum, Photo } from '@/lib/types';
 import { PhotoGrid } from './photo-grid';
 
-async function getAlbum(slug: string) {
-  const { data } = await supabase
-    .from('photo_albums')
-    .select('*')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle();
-  return data as PhotoAlbum | null;
-}
+const BASE = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-async function getPhotos(albumId: string) {
-  const { data } = await supabase
-    .from('photos')
-    .select('*')
-    .eq('album_id', albumId)
-    .order('sort_order', { ascending: true });
-  return (data || []) as Photo[];
+async function getAlbumWithPhotos(slug: string): Promise<{ album: PhotoAlbum; photos: Photo[] } | null> {
+  try {
+    const res = await fetch(`${BASE}/api/albums/slug/${encodeURIComponent(slug)}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const album = await getAlbum(params.slug);
-  if (!album) return { title: 'Album Not Found' };
-  return {
-    title: `${album.title} — Pramod Rajput`,
-    description: album.description || album.title,
-  };
+  const data = await getAlbumWithPhotos(params.slug);
+  if (!data) return { title: 'Album Not Found' };
+  return { title: `${data.album.title} — Pramod Rajput`, description: data.album.description || data.album.title };
 }
 
 export default async function AlbumPage({ params }: { params: { slug: string } }) {
-  const album = await getAlbum(params.slug);
-  if (!album) notFound();
+  const data = await getAlbumWithPhotos(params.slug);
+  if (!data) notFound();
 
-  const photos = await getPhotos(album.id);
+  const { album, photos } = data;
 
   return (
     <div className="flex flex-col">

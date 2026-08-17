@@ -1,39 +1,28 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { news as newsApi, uploadFile } from '@/lib/api-client';
 import type { News, NewsCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Loader2, X, Newspaper } from 'lucide-react';
-import { formatDateTime } from '@/lib/date-utils';
-import { slugify } from '@/lib/date-utils';
+import { Plus, Pencil, Trash2, Loader2, X, Newspaper, Upload, ImageIcon } from 'lucide-react';
+import { formatDateTime, slugify } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
 type NewsStatus = 'draft' | 'published' | 'archived';
 
 interface NewsForm {
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-  featured_image_url: string;
-  category_id: string;
-  status: NewsStatus;
+  title: string; slug: string; excerpt: string; content: string;
+  featured_image_url: string; category_id: string; status: NewsStatus;
 }
 
-const EMPTY_FORM: NewsForm = {
-  title: '', slug: '', excerpt: '', content: '',
-  featured_image_url: '', category_id: '', status: 'draft',
-};
+const EMPTY_FORM: NewsForm = { title: '', slug: '', excerpt: '', content: '', featured_image_url: '', category_id: '', status: 'draft' };
 
 const STATUS_COLORS: Record<NewsStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
-  published: 'bg-green-100 text-green-700',
-  archived: 'bg-amber-100 text-amber-700',
+  draft: 'bg-muted text-muted-foreground', published: 'bg-green-100 text-green-700', archived: 'bg-amber-100 text-amber-700',
 };
 
 export default function NewsAdminPage() {
@@ -45,44 +34,40 @@ export default function NewsAdminPage() {
   const [form, setForm] = useState<NewsForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [artRes, catRes] = await Promise.all([
-      supabase.from('news').select('*, news_categories(*)').order('created_at', { ascending: false }),
-      supabase.from('news_categories').select('*').order('name'),
-    ]);
-    setArticles((artRes.data ?? []) as News[]);
-    setCategories((catRes.data ?? []) as NewsCategory[]);
-    setLoading(false);
+    try {
+      const [arts, cats] = await Promise.all([newsApi.list({ admin: true }), newsApi.categories()]);
+      setArticles(arts);
+      setCategories(cats);
+    } catch { toast.error('Failed to load data.'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
-
   const openEdit = (a: News) => {
     setEditing(a);
-    setForm({
-      title: a.title,
-      slug: a.slug,
-      excerpt: a.excerpt ?? '',
-      content: a.content ?? '',
-      featured_image_url: a.featured_image_url ?? '',
-      category_id: a.category_id ?? '',
-      status: a.status as NewsStatus,
-    });
+    setForm({ title: a.title, slug: a.slug, excerpt: a.excerpt ?? '', content: a.content ?? '', featured_image_url: a.featured_image_url ?? '', category_id: a.category_id ?? '', status: a.status as NewsStatus });
     setShowForm(true);
   };
-
   const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); };
-
   const set = (key: keyof NewsForm, val: string) => {
-    setForm((prev) => {
-      const next = { ...prev, [key]: val };
-      if (key === 'title' && !editing) next.slug = slugify(val);
-      return next;
-    });
+    setForm((prev) => { const next = { ...prev, [key]: val }; if (key === 'title' && !editing) next.slug = slugify(val); return next; });
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const url = await uploadFile(file);
+      set('featured_image_url', url);
+      toast.success('Image uploaded successfully.');
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Upload failed.'); }
+    finally { setUploading(false); }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -90,54 +75,34 @@ export default function NewsAdminPage() {
     if (!form.title.trim() || !form.slug.trim()) { toast.error('Title and slug are required.'); return; }
     setSaving(true);
     const payload = {
-      title: form.title.trim(),
-      slug: form.slug.trim(),
-      excerpt: form.excerpt.trim() || null,
-      content: form.content.trim() || null,
-      featured_image_url: form.featured_image_url.trim() || null,
-      category_id: form.category_id || null,
-      status: form.status,
+      title: form.title.trim(), slug: form.slug.trim(), excerpt: form.excerpt.trim() || null,
+      content: form.content.trim() || null, featured_image_url: form.featured_image_url.trim() || null,
+      category_id: form.category_id || null, status: form.status,
       published_at: form.status === 'published' ? new Date().toISOString() : null,
     };
     try {
-      if (editing) {
-        const { error } = await supabase.from('news').update(payload).eq('id', editing.id);
-        if (error) throw error;
-        toast.success('Article updated.');
-      } else {
-        const { error } = await supabase.from('news').insert(payload);
-        if (error) throw error;
-        toast.success('Article created.');
-      }
-      closeForm();
-      fetchAll();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save.');
-    } finally {
-      setSaving(false);
-    }
+      if (editing) { await newsApi.update(editing.id, payload); toast.success('Article updated.'); }
+      else { await newsApi.create(payload); toast.success('Article created.'); }
+      closeForm(); fetchAll();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed to save.'); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this article? This cannot be undone.')) return;
     setDeleting(id);
-    const { error } = await supabase.from('news').delete().eq('id', id);
-    if (error) toast.error(error.message);
-    else { toast.success('Article deleted.'); fetchAll(); }
-    setDeleting(null);
+    try { await newsApi.remove(id); toast.success('Article deleted.'); fetchAll(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Failed.'); }
+    finally { setDeleting(null); }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">News</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage news articles and announcements.</p>
-        </div>
+        <div><h1 className="text-2xl font-bold">News</h1><p className="text-sm text-muted-foreground mt-1">Manage news articles and announcements.</p></div>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />New Article</Button>
       </div>
 
-      {/* Slide-in form */}
       {showForm && (
         <div className="rounded-xl border border-border bg-card p-6 space-y-5">
           <div className="flex items-center justify-between">
@@ -176,8 +141,17 @@ export default function NewsAdminPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Featured Image URL</Label>
-                <Input value={form.featured_image_url} onChange={(e) => set('featured_image_url', e.target.value)} placeholder="https://..." />
+                <Label>Featured Image</Label>
+                <div className="flex gap-2">
+                  <Input value={form.featured_image_url} onChange={(e) => set('featured_image_url', e.target.value)} placeholder="https:// or upload below" className="flex-1" />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ''; }} />
+                  <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {form.featured_image_url && (
+                  <img src={form.featured_image_url} alt="Preview" className="h-24 rounded-lg border border-border object-cover mt-1" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                )}
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <Label>Excerpt</Label>
@@ -189,7 +163,7 @@ export default function NewsAdminPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || uploading}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {editing ? 'Save Changes' : 'Publish'}
               </Button>
@@ -200,9 +174,7 @@ export default function NewsAdminPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : articles.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-12 text-center">
           <Newspaper className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-40" />
@@ -225,25 +197,26 @@ export default function NewsAdminPage() {
                 {articles.map((a) => (
                   <tr key={a.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="text-sm font-medium truncate max-w-xs">{a.title}</p>
-                      <p className="text-xs text-muted-foreground">/news/{a.slug}</p>
+                      <div className="flex items-center gap-3">
+                        {a.featured_image_url ? (
+                          <img src={a.featured_image_url} alt="" className="h-8 w-8 rounded object-cover shrink-0" />
+                        ) : (
+                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0"><ImageIcon className="h-4 w-4 text-muted-foreground" /></div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium truncate max-w-xs">{a.title}</p>
+                          <p className="text-xs text-muted-foreground">/news/{a.slug}</p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">
-                      {a.news_categories?.name ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                      {formatDateTime(a.created_at)}
-                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{a.news_categories?.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{formatDateTime(a.created_at)}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[a.status as NewsStatus]}`}>
-                        {a.status}
-                      </span>
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[a.status as NewsStatus]}`}>{a.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEdit(a)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors" title="Edit">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        <button onClick={() => openEdit(a)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => handleDelete(a.id)} disabled={deleting === a.id} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors" title="Delete">
                           {deleting === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                         </button>

@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { ImageIcon, ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
 import type { PhotoAlbum } from '@/lib/types';
 
 export const metadata = {
@@ -8,14 +7,13 @@ export const metadata = {
   description: 'Browse photo albums from community events, outreach programs, and initiatives.',
 };
 
-async function getAlbums() {
-  const { data } = await supabase
-    .from('photo_albums')
-    .select('*')
-    .eq('status', 'published')
-    .order('created_at', { ascending: false });
-
-  return (data || []) as PhotoAlbum[];
+async function getAlbums(): Promise<PhotoAlbum[]> {
+  try {
+    const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const res = await fetch(`${base}/api/albums`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
 }
 
 export default async function PhotosPage() {

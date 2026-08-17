@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { events as eventsApi, certificates as certsApi } from '@/lib/api-client';
 import type { Event, Certificate } from '@/lib/types';
+import type { PendingReg } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -11,28 +12,20 @@ import { Award, Loader2, ShieldX, ShieldCheck, RefreshCw } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
-interface ApprovedReg {
-  id: string;
-  registration_number: string;
-  event_id: string;
-  participant_name: string | null;
-  hasCert: boolean;
-}
-
-interface CertWithEvent extends Certificate {
-  events?: { title: string };
-  registrations?: { registration_number: string };
+interface CertWithMeta extends Certificate {
+  event_title?: string;
+  registration_number?: string;
 }
 
 export default function CertificatesPage() {
   const searchParams = useSearchParams();
   const eventParam = searchParams.get('event') ?? 'all';
 
-  const [events, setEvents] = useState<Event[]>([]);
+  const [eventList, setEventList] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState(eventParam);
   const [tab, setTab] = useState<'issued' | 'pending'>('issued');
-  const [certs, setCerts] = useState<CertWithEvent[]>([]);
-  const [pendingRegs, setPendingRegs] = useState<ApprovedReg[]>([]);
+  const [certs, setCerts] = useState<CertWithMeta[]>([]);
+  const [pendingRegs, setPendingRegs] = useState<PendingReg[]>([]);
   const [templates, setTemplates] = useState<{ id: string; name: string }[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [search, setSearch] = useState('');
@@ -42,83 +35,54 @@ export default function CertificatesPage() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('events').select('id, title').order('created_at', { ascending: false }),
-      supabase.from('certificate_templates').select('id, name').eq('is_active', true),
-    ]).then(([evRes, tmplRes]) => {
-      setEvents((evRes.data ?? []) as Event[]);
-      const tmplList = (tmplRes.data ?? []) as { id: string; name: string }[];
-      setTemplates(tmplList);
-      if (tmplList.length > 0) setSelectedTemplate(tmplList[0].id);
-    });
+      eventsApi.list({ admin: true }),
+      certsApi.templates(),
+    ]).then(([evs, tmpls]) => {
+      setEventList(evs);
+      setTemplates(tmpls);
+      if (tmpls.length > 0) setSelectedTemplate(tmpls[0].id);
+    }).catch(() => {});
   }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-
-    // Issued certs
-    let certQuery = supabase
-      .from('certificates')
-      .select('*, events(title), registrations(registration_number)')
-      .order('issued_at', { ascending: false });
-    if (selectedEvent !== 'all') certQuery = certQuery.eq('event_id', selectedEvent);
-    const { data: certData } = await certQuery;
-    setCerts((certData ?? []) as CertWithEvent[]);
-
-    // Approved registrations without certs
-    let regQuery = supabase
-      .from('registrations')
-      .select('id, registration_number, event_id, registration_values(value_text)')
-      .eq('status', 'approved');
-    if (selectedEvent !== 'all') regQuery = regQuery.eq('event_id', selectedEvent);
-    const { data: regData } = await regQuery;
-
-    const issuedRegIds = new Set((certData ?? []).map((c: CertWithEvent) => c.registration_id));
-
-    const pending: ApprovedReg[] = (regData ?? [])
-      .filter((r: { id: string }) => !issuedRegIds.has(r.id))
-      .map((r: { id: string; registration_number: string; event_id: string; registration_values?: { value_text: string | null }[] }) => ({
-        id: r.id,
-        registration_number: r.registration_number,
-        event_id: r.event_id,
-        participant_name: r.registration_values?.[0]?.value_text ?? null,
-        hasCert: false,
-      }));
-
-    setPendingRegs(pending);
-    setLoading(false);
-  }, [selectedEvent]);
+    try {
+      const eventId = selectedEvent !== 'all' ? selectedEvent : undefined;
+      const [certData, pendingData] = await Promise.all([
+        certsApi.list({ event_id: eventId, search: search || undefined }),
+        certsApi.pending(eventId),
+      ]);
+      setCerts(certData as CertWithMeta[]);
+      setPendingRegs(pendingData);
+    } catch { toast.error('Failed to load certificates.'); }
+    finally { setLoading(false); }
+  }, [selectedEvent, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const issueCertificate = async (reg: ApprovedReg) => {
+  const issueCertificate = async (reg: PendingReg) => {
     if (!selectedTemplate) { toast.error('Please select a certificate template first.'); return; }
     setIssuing(reg.id);
-    const { error } = await supabase.from('certificates').insert({
-      registration_id: reg.id,
-      event_id: reg.event_id,
-      template_id: selectedTemplate,
-      participant_name: reg.participant_name ?? reg.registration_number,
-      status: 'valid',
-    });
-    if (error) toast.error(error.message);
-    else { toast.success('Certificate issued successfully.'); fetchData(); }
-    setIssuing(null);
+    try {
+      await certsApi.issue({ registration_id: reg.id, event_id: reg.event_id, template_id: selectedTemplate, participant_name: reg.participant_name ?? reg.registration_number });
+      toast.success('Certificate issued successfully.');
+      fetchData();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed to issue certificate.'); }
+    finally { setIssuing(null); }
   };
 
   const issueAll = async () => {
     if (!selectedTemplate) { toast.error('Please select a certificate template first.'); return; }
     if (pendingRegs.length === 0) { toast.info('No pending registrations.'); return; }
     setIssuing('bulk');
+    let count = 0;
     for (const reg of pendingRegs) {
-      await supabase.from('certificates').insert({
-        registration_id: reg.id,
-        event_id: reg.event_id,
-        template_id: selectedTemplate,
-        participant_name: reg.participant_name ?? reg.registration_number,
-        status: 'valid',
-      });
+      try {
+        await certsApi.issue({ registration_id: reg.id, event_id: reg.event_id, template_id: selectedTemplate, participant_name: reg.participant_name ?? reg.registration_number });
+        count++;
+      } catch { /* continue */ }
     }
-    toast.success(`Issued ${pendingRegs.length} certificates.`);
+    toast.success(`Issued ${count} certificates.`);
     fetchData();
     setIssuing(null);
   };
@@ -126,98 +90,60 @@ export default function CertificatesPage() {
   const revokeCert = async (id: string) => {
     if (!confirm('Revoke this certificate? It will no longer be valid.')) return;
     setRevoking(id);
-    const { error } = await supabase.from('certificates').update({
-      status: 'revoked',
-      revoked_at: new Date().toISOString(),
-      revocation_reason: 'Revoked by admin',
-    }).eq('id', id);
-    if (error) toast.error(error.message);
-    else { toast.success('Certificate revoked.'); fetchData(); }
-    setRevoking(null);
+    try {
+      await certsApi.updateStatus(id, 'revoked');
+      toast.success('Certificate revoked.');
+      fetchData();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed.'); }
+    finally { setRevoking(null); }
   };
 
   const reinstateC = async (id: string) => {
     setRevoking(id);
-    const { error } = await supabase.from('certificates').update({
-      status: 'valid',
-      revoked_at: null,
-      revocation_reason: null,
-    }).eq('id', id);
-    if (error) toast.error(error.message);
-    else { toast.success('Certificate reinstated.'); fetchData(); }
-    setRevoking(null);
+    try {
+      await certsApi.updateStatus(id, 'valid');
+      toast.success('Certificate reinstated.');
+      fetchData();
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed.'); }
+    finally { setRevoking(null); }
   };
 
-  const filteredCerts = certs.filter((c) =>
-    !search || c.certificate_number.toLowerCase().includes(search.toLowerCase()) ||
-    c.participant_name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCerts = certs.filter((c) => !search || c.certificate_number.toLowerCase().includes(search.toLowerCase()) || c.participant_name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Certificates</h1>
-          <p className="text-sm text-muted-foreground mt-1">Issue and manage participant certificates.</p>
-        </div>
-      </div>
+      <div><h1 className="text-2xl font-bold">Certificates</h1><p className="text-sm text-muted-foreground mt-1">Issue and manage participant certificates.</p></div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-          <SelectTrigger className="w-52">
-            <SelectValue placeholder="All Events" />
-          </SelectTrigger>
+          <SelectTrigger className="w-52"><SelectValue placeholder="All Events" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Events</SelectItem>
-            {events.map((e) => <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>)}
+            {eventList.map((e) => <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>)}
           </SelectContent>
         </Select>
-
         {templates.length > 0 && (
           <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-            <SelectTrigger className="w-52">
-              <SelectValue placeholder="Select Template" />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-            </SelectContent>
+            <SelectTrigger className="w-52"><SelectValue placeholder="Select Template" /></SelectTrigger>
+            <SelectContent>{templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
           </Select>
         )}
-
-        <Input
-          placeholder="Search certificates..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-64"
-        />
+        <Input placeholder="Search certificates..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit">
         {(['issued', 'pending'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${
-              tab === t ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
+          <button key={t} onClick={() => setTab(t)} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${tab === t ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
             {t === 'issued' ? `Issued (${certs.length})` : `Pending (${pendingRegs.length})`}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : tab === 'issued' ? (
         filteredCerts.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
-            <Award className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            No certificates issued yet.
-          </div>
+          <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground"><Award className="h-10 w-10 mx-auto mb-3 opacity-40" />No certificates issued yet.</div>
         ) : (
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="overflow-x-auto">
@@ -237,40 +163,21 @@ export default function CertificatesPage() {
                     <tr key={cert.id} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 text-sm font-mono">{cert.certificate_number}</td>
                       <td className="px-4 py-3 text-sm font-medium">{cert.participant_name}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">
-                        {cert.events?.title ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                        {formatDateTime(cert.issued_at)}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{cert.event_title ?? '—'}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{formatDateTime(cert.issued_at)}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          cert.status === 'valid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {cert.status === 'valid'
-                            ? <ShieldCheck className="h-3 w-3" />
-                            : <ShieldX className="h-3 w-3" />}
-                          {cert.status}
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cert.status === 'valid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {cert.status === 'valid' ? <ShieldCheck className="h-3 w-3" /> : <ShieldX className="h-3 w-3" />}{cert.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
                           {cert.status === 'valid' ? (
-                            <button
-                              onClick={() => revokeCert(cert.id)}
-                              disabled={revoking === cert.id}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors"
-                              title="Revoke"
-                            >
+                            <button onClick={() => revokeCert(cert.id)} disabled={revoking === cert.id} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors" title="Revoke">
                               {revoking === cert.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldX className="h-3.5 w-3.5" />}
                             </button>
                           ) : (
-                            <button
-                              onClick={() => reinstateC(cert.id)}
-                              disabled={revoking === cert.id}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-green-100 hover:text-green-700 transition-colors"
-                              title="Reinstate"
-                            >
+                            <button onClick={() => reinstateC(cert.id)} disabled={revoking === cert.id} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-green-100 hover:text-green-700 transition-colors" title="Reinstate">
                               {revoking === cert.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                             </button>
                           )}
@@ -289,16 +196,12 @@ export default function CertificatesPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">{pendingRegs.length} approved registration(s) without certificates.</p>
               <Button size="sm" onClick={issueAll} disabled={issuing === 'bulk'}>
-                {issuing === 'bulk' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Award className="h-4 w-4 mr-2" />}
-                Issue All
+                {issuing === 'bulk' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Award className="h-4 w-4 mr-2" />}Issue All
               </Button>
             </div>
           )}
           {pendingRegs.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
-              <ShieldCheck className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              All approved registrations have certificates.
-            </div>
+            <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground"><ShieldCheck className="h-10 w-10 mx-auto mb-3 opacity-40" />All approved registrations have certificates.</div>
           ) : (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <table className="w-full">
@@ -316,8 +219,7 @@ export default function CertificatesPage() {
                       <td className="px-4 py-3 text-sm">{reg.participant_name ?? '—'}</td>
                       <td className="px-4 py-3 text-right">
                         <Button size="sm" variant="outline" onClick={() => issueCertificate(reg)} disabled={issuing === reg.id}>
-                          {issuing === reg.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Award className="h-3.5 w-3.5 mr-1.5" />}
-                          Issue
+                          {issuing === reg.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Award className="h-3.5 w-3.5 mr-1.5" />}Issue
                         </Button>
                       </td>
                     </tr>
