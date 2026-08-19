@@ -11,7 +11,14 @@ const navLinks = [
   { href: '/about', label: 'About' },
   { href: '/journey', label: 'Journey' },
   { href: '/achievements', label: 'Achievements' },
-  { href: '/events', label: 'Events' },
+  {
+    href: '/events',
+    label: 'Events',
+    children: [
+      { href: '/events', label: 'Upcoming Events' },
+      { href: '/memories', label: 'Past Memories' },
+    ],
+  },
   { href: '/news', label: 'News' },
   {
     href: '/gallery',

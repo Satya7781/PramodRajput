@@ -8,12 +8,14 @@ import type {
   Profile, Event, EventForm, FormField, FormFieldOption,
   Registration, RegistrationValue, News, NewsCategory,
   PhotoAlbum, Photo, Video, Certificate, SiteSetting, AuditLog,
+  EventMemory, MemoryPhoto, MemoryVideo,
 } from './types';
 
 export type {
   Profile, Event, EventForm, FormField, FormFieldOption,
   Registration, RegistrationValue, News, NewsCategory,
   PhotoAlbum, Photo, Video, Certificate, SiteSetting, AuditLog,
+  EventMemory, MemoryPhoto, MemoryVideo,
 };
 
 const BASE = '';   // same-origin; all routes are under /api
@@ -273,7 +275,7 @@ export const stats = {
       totalEvents: number; activeEvents: number;
       totalRegistrations: number; pendingRegistrations: number;
       certificatesGenerated: number; newsArticles: number;
-      photoAlbums: number; videos: number;
+      photoAlbums: number; videos: number; memories: number;
     }>('/api/stats');
   },
 };
@@ -285,6 +287,50 @@ export const auditLogs = {
     if (params.limit) q.set('limit', String(params.limit));
     if (params.search) q.set('search', params.search);
     return apiFetch<AuditLog[]>(`/api/audit-logs?${q}`);
+  },
+};
+
+// ─── memories ────────────────────────────────────────────────────────────────
+export const memories = {
+  list(params: { admin?: boolean; limit?: number; search?: string } = {}) {
+    const q = new URLSearchParams();
+    if (params.admin) q.set('admin', '1');
+    if (params.limit) q.set('limit', String(params.limit));
+    if (params.search) q.set('search', params.search);
+    return apiFetch<EventMemory[]>(`/api/memories?${q}`);
+  },
+  getBySlug(slug: string) {
+    return apiFetch<EventMemory>(`/api/memories/slug/${encodeURIComponent(slug)}`);
+  },
+  getById(id: string) {
+    return apiFetch<EventMemory>(`/api/memories/${id}`);
+  },
+  create(payload: Partial<EventMemory>) {
+    return apiFetch<EventMemory>('/api/memories', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  update(id: string, payload: Partial<EventMemory>) {
+    return apiFetch<EventMemory>(`/api/memories/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  },
+  remove(id: string) {
+    return apiFetch<{ success: boolean }>(`/api/memories/${id}`, { method: 'DELETE' });
+  },
+  // photos
+  addPhoto(memoryId: string, payload: { image_url: string; caption?: string }) {
+    return apiFetch<MemoryPhoto>(`/api/memories/${memoryId}/photos`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+  },
+  removePhoto(memoryId: string, photoId: string) {
+    return apiFetch<{ success: boolean }>(`/api/memories/${memoryId}/photos/${photoId}`, { method: 'DELETE' });
+  },
+  // videos
+  addVideo(memoryId: string, payload: { video_url: string; title?: string; thumbnail_url?: string }) {
+    return apiFetch<MemoryVideo>(`/api/memories/${memoryId}/videos`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+  },
+  removeVideo(memoryId: string, videoId: string) {
+    return apiFetch<{ success: boolean }>(`/api/memories/${memoryId}/videos/${videoId}`, { method: 'DELETE' });
   },
 };
 

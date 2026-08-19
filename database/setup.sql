@@ -393,3 +393,57 @@ ON CONFLICT DO NOTHING;
 -- Done! Run the following to verify:
 --   SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;
 -- ============================================================
+
+-- ============================================================
+-- PAST EVENT MEMORIES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS event_memories (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title           TEXT NOT NULL,
+  slug            TEXT UNIQUE NOT NULL,
+  event_date      DATE NOT NULL,
+  location        TEXT,
+  description     TEXT,
+  cover_image_url TEXT,
+  status          TEXT NOT NULL DEFAULT 'published'
+                    CHECK (status IN ('draft','published','archived')),
+  created_by      UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ DEFAULT now(),
+  updated_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_event_memories_slug   ON event_memories(slug);
+CREATE INDEX IF NOT EXISTS idx_event_memories_date   ON event_memories(event_date DESC);
+CREATE INDEX IF NOT EXISTS idx_event_memories_status ON event_memories(status);
+
+CREATE TABLE IF NOT EXISTS memory_photos (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memory_id  UUID NOT NULL REFERENCES event_memories(id) ON DELETE CASCADE,
+  image_url  TEXT NOT NULL,
+  caption    TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_memory_photos_memory_id ON memory_photos(memory_id);
+
+CREATE TABLE IF NOT EXISTS memory_videos (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memory_id     UUID NOT NULL REFERENCES event_memories(id) ON DELETE CASCADE,
+  video_url     TEXT NOT NULL,
+  title         TEXT,
+  thumbnail_url TEXT,
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_memory_videos_memory_id ON memory_videos(memory_id);
+
+-- updated_at trigger for event_memories
+DROP TRIGGER IF EXISTS trg_updated_at ON event_memories;
+CREATE TRIGGER trg_updated_at
+  BEFORE UPDATE ON event_memories
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Grant to app user
+GRANT ALL PRIVILEGES ON event_memories  TO pramod_user;
+GRANT ALL PRIVILEGES ON memory_photos   TO pramod_user;
+GRANT ALL PRIVILEGES ON memory_videos   TO pramod_user;

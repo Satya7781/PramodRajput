@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { stats as statsApi, auditLogs } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { CalendarDays, ClipboardList, Award, Newspaper, ImageIcon, Video, Users, TrendingUp, Loader2 } from 'lucide-react';
+import { CalendarDays, ClipboardList, Award, Newspaper, ImageIcon, Video, Users, TrendingUp, Loader2, BookOpen } from 'lucide-react';
 import { formatDate } from '@/lib/date-utils';
 
 interface DashboardStats {
   totalEvents: number; activeEvents: number;
   totalRegistrations: number; pendingRegistrations: number;
   certificatesGenerated: number; newsArticles: number;
-  photoAlbums: number; videos: number;
+  photoAlbums: number; videos: number; memories: number;
 }
 
 interface RecentActivity {
@@ -51,6 +51,7 @@ export default function DashboardPage() {
     { label: 'Total Registrations', value: stats?.totalRegistrations || 0, icon: ClipboardList, color: 'text-primary' },
     { label: 'Pending Registrations', value: stats?.pendingRegistrations || 0, icon: ClipboardList, color: 'text-accent' },
     { label: 'Certificates Generated', value: stats?.certificatesGenerated || 0, icon: Award, color: 'text-secondary' },
+    { label: 'Memories Published', value: stats?.memories || 0, icon: BookOpen, color: 'text-primary' },
     { label: 'News Articles', value: stats?.newsArticles || 0, icon: Newspaper, color: 'text-primary' },
     { label: 'Photo Albums', value: stats?.photoAlbums || 0, icon: ImageIcon, color: 'text-accent' },
     { label: 'Videos', value: stats?.videos || 0, icon: Video, color: 'text-secondary' },
@@ -63,7 +64,7 @@ export default function DashboardPage() {
         <p className="text-muted-foreground text-sm mt-1">Here's an overview of your platform.</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {statCards.map((stat, i) => (
           <div key={i} className="rounded-xl border border-border bg-card p-5 animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
             <div className="flex items-center justify-between mb-3">

@@ -237,3 +237,44 @@ export interface RegistrationWithValues extends Registration {
   events?: Event;
   registration_values?: (RegistrationValue & { form_fields?: FormField })[];
 }
+
+// ─── Past Event Memories ──────────────────────────────────────────────────────
+
+export type MemoryStatus = 'draft' | 'published' | 'archived';
+
+export interface EventMemory {
+  id: string;
+  title: string;
+  slug: string;
+  event_date: string;           // DATE — the date the original event occurred
+  location: string | null;      // venue / city
+  description: string | null;   // rich text body
+  cover_image_url: string | null;
+  status: MemoryStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  memory_photos?: MemoryPhoto[];
+  memory_videos?: MemoryVideo[];
+  photo_count?: number;
+  video_count?: number;
+}
+
+export interface MemoryPhoto {
+  id: string;
+  memory_id: string;
+  image_url: string;
+  caption: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface MemoryVideo {
+  id: string;
+  memory_id: string;
+  video_url: string;
+  title: string | null;
+  thumbnail_url: string | null;
+  sort_order: number;
+  created_at: string;
+}

@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   X,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils';
 const adminNav = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/dashboard/events', label: 'Events', icon: CalendarDays },
+  { href: '/admin/dashboard/memories', label: 'Memories', icon: BookOpen },
   { href: '/admin/dashboard/registrations', label: 'Registrations', icon: ClipboardList },
   { href: '/admin/dashboard/certificates', label: 'Certificates', icon: Award },
   { href: '/admin/dashboard/news', label: 'News', icon: Newspaper },
@@ -36,6 +38,7 @@ const adminNav = [
 
 const editorNav = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/dashboard/memories', label: 'Memories', icon: BookOpen },
   { href: '/admin/dashboard/news', label: 'News', icon: Newspaper },
   { href: '/admin/dashboard/photos', label: 'Photos', icon: ImageIcon },
   { href: '/admin/dashboard/videos', label: 'Videos', icon: Video },
