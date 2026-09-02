@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS events (
   slug                  TEXT UNIQUE NOT NULL,
   short_description     TEXT,
   description           TEXT,
+  title_en              TEXT,
+  short_description_en  TEXT,
+  description_en        TEXT,
   banner_url            TEXT,
   start_date            DATE,
   end_date              DATE,
@@ -163,6 +166,9 @@ CREATE TABLE IF NOT EXISTS news (
   slug               TEXT UNIQUE NOT NULL,
   excerpt            TEXT,
   content            TEXT,
+  title_en           TEXT,
+  excerpt_en         TEXT,
+  content_en         TEXT,
   featured_image_url TEXT,
   category_id        UUID REFERENCES news_categories(id) ON DELETE SET NULL,
   status             TEXT NOT NULL DEFAULT 'draft'
@@ -281,6 +287,56 @@ CREATE TABLE IF NOT EXISTS certificates (
 );
 
 -- ============================================================
+-- EVENT MEMORIES (past event highlights with photos & videos)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS event_memories (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title           TEXT NOT NULL,
+  slug            TEXT UNIQUE NOT NULL,
+  event_date      DATE NOT NULL,
+  location        TEXT,
+  description     TEXT,
+  cover_image_url TEXT,
+  title_en        TEXT,
+  description_en  TEXT,
+  status          TEXT NOT NULL DEFAULT 'published'
+                    CHECK (status IN ('draft','published','archived')),
+  created_by      UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ DEFAULT now(),
+  updated_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_memories_slug   ON event_memories(slug);
+CREATE INDEX IF NOT EXISTS idx_memories_status ON event_memories(status);
+CREATE INDEX IF NOT EXISTS idx_memories_date   ON event_memories(event_date DESC);
+
+-- ============================================================
+-- MEMORY PHOTOS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS memory_photos (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memory_id  UUID NOT NULL REFERENCES event_memories(id) ON DELETE CASCADE,
+  image_url  TEXT NOT NULL,
+  caption    TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_memory_photos_memory_id ON memory_photos(memory_id);
+
+-- ============================================================
+-- MEMORY VIDEOS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS memory_videos (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memory_id     UUID NOT NULL REFERENCES event_memories(id) ON DELETE CASCADE,
+  video_url     TEXT NOT NULL,
+  title         TEXT,
+  thumbnail_url TEXT,
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_memory_videos_memory_id ON memory_videos(memory_id);
+
+-- ============================================================
 -- SITE SETTINGS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS site_settings (
@@ -321,7 +377,7 @@ DECLARE t TEXT;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'profiles','events','event_forms','form_fields','registrations',
-    'registration_values','news','photo_albums','videos',
+    'registration_values','news','photo_albums','videos','event_memories',
     'certificate_templates','certificate_template_fields','certificates','site_settings'
   ] LOOP
     EXECUTE format(
@@ -355,16 +411,22 @@ INSERT INTO news_categories (name, slug) VALUES
 ON CONFLICT (slug) DO NOTHING;
 
 -- Site settings defaults
+-- All fields are stored as JSON values (strings wrapped in quotes).
+-- Social links are stored as individual flat keys (not nested) so the public site can read them directly.
 INSERT INTO site_settings (key, value) VALUES
-  ('site_name',       '"Pramod Rajput"'),
-  ('site_tagline',    '"Serving People, Building Tomorrow"'),
-  ('contact_email',   '"pramodrajput0214@gmail.com"'),
-  ('contact_phone',   '"+91 98067 31443"'),
-  ('contact_address', '"श्री हरिहर नगर फन्दा कला, तह. हुजुर, जिला भोपाल (म.प्र.) 462030"'),
-  ('hero_title',      '"Pramod Rajput"'),
-  ('hero_tagline',    '"Dedicated to public service and community empowerment"'),
-  ('about_text',      '""'),
-  ('social_links',    '{"facebook":"","twitter":"","instagram":"","youtube":""}')
+  ('site_name',                '"Pramod Rajput"'),
+  ('site_tagline',             '"Serving People, Building Tomorrow"'),
+  ('contact_email',            '"pramodrajput0214@gmail.com"'),
+  ('contact_phone',            '"+91 98067 31443"'),
+  ('contact_phone_secondary',  '"+91 98938 36607"'),
+  ('contact_address',          '"श्री हरिहर नगर फन्दा कला, तह. हुजुर, जिला भोपाल (म.प्र.) 462030"'),
+  ('hero_title',               '"Pramod Rajput"'),
+  ('hero_tagline',             '"Dedicated to public service and community empowerment"'),
+  ('about_text',               '""'),
+  ('facebook',                 '""'),
+  ('twitter',                  '""'),
+  ('instagram',                '""'),
+  ('youtube',                  '""')
 ON CONFLICT (key) DO NOTHING;
 
 -- Default certificate template

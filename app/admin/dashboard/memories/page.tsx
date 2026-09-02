@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Plus, Pencil, Trash2, Loader2, X, BookOpen,
   ChevronDown, ChevronUp, Upload, ImageIcon, Play,
-  Calendar, MapPin, Camera, Video as VideoIcon,
+  Calendar, MapPin, Camera, Video as VideoIcon, Languages,
 } from 'lucide-react';
 import { formatDate, slugify } from '@/lib/date-utils';
 import { toast } from 'sonner';
+import { useAutoTranslate } from '@/lib/use-translate';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,11 +29,14 @@ interface MemoryForm {
   description: string;
   cover_image_url: string;
   status: MemStatus;
+  title_en: string;
+  description_en: string;
 }
 
 const EMPTY: MemoryForm = {
   title: '', slug: '', event_date: '', location: '',
   description: '', cover_image_url: '', status: 'published',
+  title_en: '', description_en: '',
 };
 
 interface MemoryWithMedia extends EventMemory {
@@ -77,6 +81,9 @@ export default function MemoriesAdminPage() {
   const [videoTitle, setVideoTitle] = useState('');
   const [addingVideo, setAddingVideo] = useState(false);
 
+  // Auto-translate hook
+  const { autoTranslate, translating } = useAutoTranslate();
+
   // ─── Data fetch ─────────────────────────────────────────────────────────────
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -103,6 +110,8 @@ export default function MemoriesAdminPage() {
       description: m.description ?? '',
       cover_image_url: m.cover_image_url ?? '',
       status: m.status as MemStatus,
+      title_en: (m as any).title_en ?? '',
+      description_en: (m as any).description_en ?? '',
     });
     setShowForm(true);
   };
@@ -132,6 +141,8 @@ export default function MemoriesAdminPage() {
       description: form.description.trim() || null,
       cover_image_url: form.cover_image_url.trim() || null,
       status: form.status,
+      title_en: form.title_en.trim() || null,
+      description_en: form.description_en.trim() || null,
     };
     try {
       if (editing) {
@@ -282,8 +293,16 @@ export default function MemoriesAdminPage() {
               <Input
                 value={form.title}
                 onChange={e => set('title', e.target.value)}
-                placeholder="e.g. Janpad Panchayat Annual Sports Meet 2023"
+                placeholder="e.g. जनपद पंचायत वार्षिक खेल महोत्सव 2023"
                 required
+              />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="flex items-center gap-1.5">Event Title <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+              <Input
+                value={form.title_en}
+                onChange={e => set('title_en', e.target.value)}
+                placeholder="e.g. Janpad Panchayat Annual Sports Meet 2023 (optional)"
               />
             </div>
 
@@ -382,9 +401,39 @@ export default function MemoriesAdminPage() {
               <Textarea
                 value={form.description}
                 onChange={e => set('description', e.target.value)}
-                placeholder="Write about what happened at this event — highlights, achievements, community impact…"
+                placeholder="Write about what happened at this event (Hindi)…"
                 rows={5}
               />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="flex items-center gap-1.5">Description <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+              <Textarea
+                value={form.description_en}
+                onChange={e => set('description_en', e.target.value)}
+                placeholder="Write about what happened at this event (English, optional)…"
+                rows={5}
+              />
+            </div>
+            {/* Auto-translate */}
+            <div className="md:col-span-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={translating}
+                onClick={async () => {
+                  const [t1, t2] = await autoTranslate([form.title, form.description]);
+                  if (t1 && !form.title_en.trim())       set('title_en', t1);
+                  if (t2 && !form.description_en.trim()) set('description_en', t2);
+                }}
+              >
+                {translating
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Translating…</>
+                  : <><Languages className="h-4 w-4 mr-2" />Auto-translate Hindi → English</>}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                Fills English fields automatically using MyMemory (free). You can edit before saving.
+              </p>
             </div>
 
             {/* Actions */}

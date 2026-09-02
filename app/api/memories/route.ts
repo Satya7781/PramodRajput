@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { ok, err, requireEditor, isResponse, writeAuditLog } from '@/lib/api-helpers';
 import { query, queryOne } from '@/lib/db';
+import { translateBatch, isHindi } from '@/lib/translate';
 
-// GET /api/memories — public (published) or admin (all)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search');
 
     let sql = `
-      SELECT
-        m.*,
+      SELECT m.*,
         (SELECT COUNT(*) FROM memory_photos  WHERE memory_id = m.id)::int AS photo_count,
         (SELECT COUNT(*) FROM memory_videos  WHERE memory_id = m.id)::int AS video_count
       FROM event_memories m
@@ -21,32 +20,21 @@ export async function GET(req: NextRequest) {
     const params: unknown[] = [];
     let idx = 1;
 
-    if (!adminMode) {
-      sql += ` AND m.status = 'published'`;
-    }
-
+    if (!adminMode) { sql += ` AND m.status = 'published'`; }
     if (search) {
       sql += ` AND (m.title ILIKE $${idx} OR m.location ILIKE $${idx} OR m.description ILIKE $${idx})`;
-      params.push(`%${search}%`);
-      idx++;
+      params.push(`%${search}%`); idx++;
     }
 
     sql += ` ORDER BY m.event_date DESC, m.created_at DESC`;
+    if (limit) { sql += ` LIMIT $${idx++}`; params.push(parseInt(limit, 10)); }
 
-    if (limit) {
-      sql += ` LIMIT $${idx}`;
-      params.push(parseInt(limit, 10));
-    }
-
-    const memories = await query(sql, params);
-    return ok(memories);
+    return ok(await query(sql, params));
   } catch (e) {
-    console.error('GET /api/memories error:', e);
     return err('Internal server error', 500);
   }
 }
 
-// POST /api/memories — editor+
 export async function POST(req: NextRequest) {
   const authResult = requireEditor(req);
   if (isResponse(authResult)) return authResult;
@@ -60,15 +48,33 @@ export async function POST(req: NextRequest) {
     if (!slug?.trim())  return err('Slug is required');
     if (!event_date)    return err('Event date is required');
 
+    let { title_en, description_en } = body as {
+      title_en?: string; description_en?: string;
+    };
+
+    // Auto-translate if content is Hindi
+    if (isHindi(title) || isHindi(description)) {
+      const textsToTranslate = [
+        !title_en?.trim()       ? title       : null,
+        !description_en?.trim() ? description : null,
+      ];
+      if (textsToTranslate.some(t => t && t.trim())) {
+        const [tTitle, tDesc] = await translateBatch(textsToTranslate);
+        if (!title_en?.trim()       && tTitle) title_en = tTitle;
+        if (!description_en?.trim() && tDesc)  description_en = tDesc;
+      }
+    }
+
     const memory = await queryOne(
       `INSERT INTO event_memories
-         (title, slug, event_date, location, description, cover_image_url, status, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING *`,
+         (title, slug, event_date, location, description, cover_image_url, status, created_by,
+          title_en, description_en)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
       [
         title.trim(), slug.trim(), event_date,
         location?.trim() || null, description?.trim() || null,
         cover_image_url?.trim() || null, status || 'published', user.id,
+        title_en || null, description_en || null,
       ]
     );
 
@@ -77,7 +83,6 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Internal server error';
     if (msg.includes('unique') || msg.includes('duplicate')) return err('Slug already exists', 409);
-    console.error('POST /api/memories error:', e);
     return err(msg, 500);
   }
 }

@@ -1,24 +1,25 @@
-export function formatDate(dateStr: string | null | undefined): string {
+import type { Lang } from './i18n';
+
+const LOCALE_MAP: Record<Lang, string> = { hi: 'hi-IN', en: 'en-IN' };
+
+export function formatDate(dateStr: string | null | undefined, lang: Lang = 'hi'): string {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return date.toLocaleDateString(LOCALE_MAP[lang], { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-export function formatDateShort(dateStr: string | null | undefined): string {
+export function formatDateShort(dateStr: string | null | undefined, lang: Lang = 'hi'): string {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(LOCALE_MAP[lang], { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function formatDateTime(dateStr: string | null | undefined): string {
+export function formatDateTime(dateStr: string | null | undefined, lang: Lang = 'hi'): string {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
+  return date.toLocaleDateString(LOCALE_MAP[lang], {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
   });
 }
 
@@ -28,7 +29,7 @@ export function formatTime(timeStr: string | null | undefined): string {
     const [hours, minutes] = timeStr.split(':');
     const date = new Date();
     date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
   } catch {
     return timeStr;
   }

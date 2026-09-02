@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, Upload } from 'lucide-react';
+import { Loader2, Save, Upload, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { slugify } from '@/lib/date-utils';
+import { useAutoTranslate } from '@/lib/use-translate';
 
 type EventStatus = Event['status'];
 
@@ -26,8 +27,11 @@ export function EventForm({ event }: EventFormProps) {
 
   const [title, setTitle] = useState(event?.title ?? '');
   const [slug, setSlug] = useState(event?.slug ?? '');
+  const [titleEn, setTitleEn] = useState((event as any)?.title_en ?? '');
   const [shortDescription, setShortDescription] = useState(event?.short_description ?? '');
+  const [shortDescriptionEn, setShortDescriptionEn] = useState((event as any)?.short_description_en ?? '');
   const [description, setDescription] = useState(event?.description ?? '');
+  const [descriptionEn, setDescriptionEn] = useState((event as any)?.description_en ?? '');
   const [bannerUrl, setBannerUrl] = useState(event?.banner_url ?? '');
   const [startDate, setStartDate] = useState(event?.start_date ?? '');
   const [endDate, setEndDate] = useState(event?.end_date ?? '');
@@ -43,6 +47,7 @@ export function EventForm({ event }: EventFormProps) {
   const [status, setStatus] = useState<EventStatus>(event?.status ?? 'draft');
   const [saving, setSaving] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const { autoTranslate, translating } = useAutoTranslate();
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -78,6 +83,9 @@ export function EventForm({ event }: EventFormProps) {
       registration_enabled: registrationEnabled,
       certificate_enabled: certificateEnabled,
       status,
+      title_en: titleEn.trim() || null,
+      short_description_en: shortDescriptionEn.trim() || null,
+      description_en: descriptionEn.trim() || null,
     };
 
     try {
@@ -105,7 +113,11 @@ export function EventForm({ event }: EventFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="title">Event Title <span className="text-destructive">*</span></Label>
-            <Input id="title" value={title} onChange={(e) => handleTitleChange(e.target.value)} placeholder="e.g. Youth Leadership Summit 2026" required />
+            <Input id="title" value={title} onChange={(e) => handleTitleChange(e.target.value)} placeholder="e.g. युवा नेतृत्व सम्मेलन 2026" required />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="titleEn" className="flex items-center gap-1.5">Event Title <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+            <Input id="titleEn" value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder="e.g. Youth Leadership Summit 2026 (optional)" />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="slug">URL Slug <span className="text-destructive">*</span></Label>
@@ -117,8 +129,38 @@ export function EventForm({ event }: EventFormProps) {
             <Textarea id="shortDesc" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} placeholder="One-line summary shown on event cards..." rows={2} />
           </div>
           <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="shortDescEn" className="flex items-center gap-1.5">Short Description <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+            <Textarea id="shortDescEn" value={shortDescriptionEn} onChange={(e) => setShortDescriptionEn(e.target.value)} placeholder="English version (optional)" rows={2} />
+          </div>
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="description">Full Description</Label>
             <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detailed event description..." rows={6} />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="descriptionEn" className="flex items-center gap-1.5">Full Description <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+            <Textarea id="descriptionEn" value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} placeholder="English version (optional)" rows={6} />
+          </div>
+          {/* Auto-translate button */}
+          <div className="md:col-span-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={translating}
+              onClick={async () => {
+                const [t1, t2, t3] = await autoTranslate([title, shortDescription, description]);
+                if (t1 && !titleEn.trim())             setTitleEn(t1);
+                if (t2 && !shortDescriptionEn.trim())  setShortDescriptionEn(t2);
+                if (t3 && !descriptionEn.trim())       setDescriptionEn(t3);
+              }}
+            >
+              {translating
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Translating…</>
+                : <><Languages className="h-4 w-4 mr-2" />Auto-translate Hindi → English</>}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1">
+              Fills English fields automatically. You can edit the result before saving.
+            </p>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="bannerUrl">Banner Image</Label>

@@ -167,6 +167,15 @@ export const news = {
     return apiFetch<News[]>(`/api/news?slug=${encodeURIComponent(slug)}`).then(arr => arr[0] ?? null);
   },
   categories() { return apiFetch<NewsCategory[]>('/api/news/categories'); },
+  createCategory(payload: { name: string; slug: string }) {
+    return apiFetch<NewsCategory>('/api/news/categories', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  updateCategory(id: string, payload: { name: string; slug: string }) {
+    return apiFetch<NewsCategory>(`/api/news/categories/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  },
+  removeCategory(id: string) {
+    return apiFetch<{ success: boolean }>(`/api/news/categories/${id}`, { method: 'DELETE' });
+  },
   create(payload: Partial<News>) {
     return apiFetch<News>('/api/news', { method: 'POST', body: JSON.stringify(payload) });
   },

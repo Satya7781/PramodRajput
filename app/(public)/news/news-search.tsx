@@ -4,11 +4,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
+import { useLanguage } from '@/lib/i18n';
 
-export function NewsSearch() {
+export function NewsSearch({ placeholder }: { placeholder?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
+  const { t } = useLanguage();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +24,10 @@ export function NewsSearch() {
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
         type="text"
-        placeholder="Search news..."
+        placeholder={placeholder || t('news', 'search')}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="pl-10"
+        onChange={e => setQuery(e.target.value)}
+        className="pl-10 text-sm"
       />
     </form>
   );

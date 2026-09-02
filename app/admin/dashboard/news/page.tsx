@@ -8,18 +8,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Loader2, X, Newspaper, Upload, ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, X, Newspaper, Upload, ImageIcon, Languages } from 'lucide-react';
 import { formatDateTime, slugify } from '@/lib/date-utils';
 import { toast } from 'sonner';
+import { useAutoTranslate } from '@/lib/use-translate';
 
 type NewsStatus = 'draft' | 'published' | 'archived';
 
 interface NewsForm {
   title: string; slug: string; excerpt: string; content: string;
   featured_image_url: string; category_id: string; status: NewsStatus;
+  title_en: string; excerpt_en: string; content_en: string;
 }
 
-const EMPTY_FORM: NewsForm = { title: '', slug: '', excerpt: '', content: '', featured_image_url: '', category_id: '', status: 'draft' };
+const EMPTY_FORM: NewsForm = {
+  title: '', slug: '', excerpt: '', content: '',
+  featured_image_url: '', category_id: '', status: 'draft',
+  title_en: '', excerpt_en: '', content_en: '',
+};
 
 const STATUS_COLORS: Record<NewsStatus, string> = {
   draft: 'bg-muted text-muted-foreground', published: 'bg-green-100 text-green-700', archived: 'bg-amber-100 text-amber-700',
@@ -36,6 +42,7 @@ export default function NewsAdminPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { autoTranslate, translating } = useAutoTranslate();
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -52,7 +59,14 @@ export default function NewsAdminPage() {
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
   const openEdit = (a: News) => {
     setEditing(a);
-    setForm({ title: a.title, slug: a.slug, excerpt: a.excerpt ?? '', content: a.content ?? '', featured_image_url: a.featured_image_url ?? '', category_id: a.category_id ?? '', status: a.status as NewsStatus });
+    setForm({
+      title: a.title, slug: a.slug, excerpt: a.excerpt ?? '', content: a.content ?? '',
+      featured_image_url: a.featured_image_url ?? '', category_id: a.category_id ?? '',
+      status: a.status as NewsStatus,
+      title_en: (a as any).title_en ?? '',
+      excerpt_en: (a as any).excerpt_en ?? '',
+      content_en: (a as any).content_en ?? '',
+    });
     setShowForm(true);
   };
   const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); };
@@ -79,6 +93,9 @@ export default function NewsAdminPage() {
       content: form.content.trim() || null, featured_image_url: form.featured_image_url.trim() || null,
       category_id: form.category_id || null, status: form.status,
       published_at: form.status === 'published' ? new Date().toISOString() : null,
+      title_en: form.title_en.trim() || null,
+      excerpt_en: form.excerpt_en.trim() || null,
+      content_en: form.content_en.trim() || null,
     };
     try {
       if (editing) { await newsApi.update(editing.id, payload); toast.success('Article updated.'); }
@@ -113,7 +130,11 @@ export default function NewsAdminPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 md:col-span-2">
                 <Label>Title <span className="text-destructive">*</span></Label>
-                <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Article title" required />
+                <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Article title (Hindi)" required />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="flex items-center gap-1.5">Title <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+                <Input value={form.title_en} onChange={(e) => set('title_en', e.target.value)} placeholder="Article title in English (optional)" />
               </div>
               <div className="space-y-1.5">
                 <Label>Slug <span className="text-destructive">*</span></Label>
@@ -155,11 +176,41 @@ export default function NewsAdminPage() {
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <Label>Excerpt</Label>
-                <Textarea value={form.excerpt} onChange={(e) => set('excerpt', e.target.value)} placeholder="Short summary..." rows={2} />
+                <Textarea value={form.excerpt} onChange={(e) => set('excerpt', e.target.value)} placeholder="Short summary (Hindi)..." rows={2} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="flex items-center gap-1.5">Excerpt <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+                <Textarea value={form.excerpt_en} onChange={(e) => set('excerpt_en', e.target.value)} placeholder="Short summary in English (optional)..." rows={2} />
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <Label>Content</Label>
-                <Textarea value={form.content} onChange={(e) => set('content', e.target.value)} placeholder="Full article content..." rows={8} />
+                <Textarea value={form.content} onChange={(e) => set('content', e.target.value)} placeholder="Full article content (Hindi)..." rows={8} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="flex items-center gap-1.5">Content <span className="rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold">EN</span></Label>
+                <Textarea value={form.content_en} onChange={(e) => set('content_en', e.target.value)} placeholder="Full article content in English (optional)..." rows={8} />
+              </div>
+              {/* Auto-translate */}
+              <div className="md:col-span-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={translating}
+                  onClick={async () => {
+                    const [t1, t2, t3] = await autoTranslate([form.title, form.excerpt, form.content]);
+                    if (t1 && !form.title_en.trim())   set('title_en', t1);
+                    if (t2 && !form.excerpt_en.trim()) set('excerpt_en', t2);
+                    if (t3 && !form.content_en.trim()) set('content_en', t3);
+                  }}
+                >
+                  {translating
+                    ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Translating…</>
+                    : <><Languages className="h-4 w-4 mr-2" />Auto-translate Hindi → English</>}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fills English fields automatically using MyMemory (free). You can edit before saving.
+                </p>
               </div>
             </div>
             <div className="flex gap-3">
