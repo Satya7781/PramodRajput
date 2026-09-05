@@ -1,102 +1,193 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Calendar, MapPin, Users, ArrowRight } from 'lucide-react';
-import type { Event } from '@/lib/types';
+import Link from 'next/link';
+import { ChevronDown, ChevronUp, Calendar, ImageIcon, Video, FolderOpen } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
-import { formatDate } from '@/lib/date-utils';
 
-function getEventStatus(e: Event): 'upcoming' | 'ongoing' | 'past' {
-  if (!e.start_date) return 'upcoming';
-  const now = new Date(); const s = new Date(e.start_date);
-  const end = e.end_date ? new Date(e.end_date) : s;
-  if (now < s) return 'upcoming';
-  if (now > end) return 'past';
-  return 'ongoing';
+interface YearSummary {
+  year: number;
+  event_count: string;
+  photo_count: string;
+  video_count: string;
 }
+
+interface GalleryEvent {
+  id: string;
+  year: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  cover_url: string | null;
+  photo_count: string;
+  video_count: string;
+}
+
+const ALL_YEARS = Array.from({ length: 2026 - 2009 + 1 }, (_, i) => 2026 - i);
 
 export default function EventsPage() {
   const { lang, t } = useLanguage();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [yearSummaries, setYearSummaries] = useState<YearSummary[]>([]);
+  const [openYear, setOpenYear] = useState<number | null>(null);
+  const [yearEvents, setYearEvents] = useState<Record<number, GalleryEvent[]>>({});
+  const [loadingYears, setLoadingYears] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch('/api/events').then(r => r.ok ? r.json() : []).then(d => { setEvents(d); setLoading(false); }).catch(() => setLoading(false));
+    fetch('/api/gallery-events')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: YearSummary[]) => { setYearSummaries(data); setLoadingYears(false); })
+      .catch(() => setLoadingYears(false));
   }, []);
 
-  const upcoming = events.filter(e => getEventStatus(e) === 'upcoming');
-  const ongoing  = events.filter(e => getEventStatus(e) === 'ongoing');
-  const past     = events.filter(e => getEventStatus(e) === 'past');
+  const hasData = (year: number) => yearSummaries.some(y => y.year === year);
+  const getSummary = (year: number) => yearSummaries.find(y => y.year === year);
 
-  const sections = [
-    { label: t('events', 'ongoing'),  items: ongoing,  color: 'text-secondary', empty: t('events', 'noOngoing') },
-    { label: t('events', 'upcoming'), items: upcoming, color: 'text-primary',   empty: t('events', 'noUpcoming') },
-    { label: t('events', 'past'),     items: past,     color: 'text-muted-foreground', empty: t('events', 'noPast') },
-  ];
-
-  const Card = ({ event, i }: { event: Event; i: number }) => (
-    <Link href={`/events/${event.slug}`} className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl transition-all animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
-      <div className="aspect-[16/10] overflow-hidden bg-muted relative">
-        {event.banner_url
-          ? <img src={event.banner_url} alt={event.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-          : <div className="h-full w-full flex items-center justify-center bg-muted"><Calendar className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground" /></div>}
-        {event.status === 'registration_open' && (
-          <span className="absolute top-3 right-3 rounded-full bg-secondary text-secondary-foreground px-2.5 py-0.5 text-xs font-medium">{t('events', 'regOpen')}</span>
-        )}
-      </div>
-      <div className="p-4 sm:p-6">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-muted-foreground mb-2">
-          {event.start_date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{formatDate(event.start_date, lang)}</span>}
-          {event.venue     && <span className="flex items-center gap-1 truncate max-w-[120px]"><MapPin className="h-3 w-3 shrink-0" />{event.venue}</span>}
-        </div>
-        <h3 className="font-bold mb-1.5 group-hover:text-primary transition-colors text-sm sm:text-base line-clamp-2 leading-snug">{event.title}</h3>
-        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-3">{event.short_description}</p>
-        {event.max_participants && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
-            <Users className="h-3 w-3" /> {t('events', 'capacity')}: {event.max_participants}
-          </div>
-        )}
-        <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-primary group-hover:gap-2 transition-all">
-          {t('common', 'viewDetails')} <ArrowRight className="h-3.5 w-3.5" />
-        </span>
-      </div>
-    </Link>
-  );
+  const toggleYear = async (year: number) => {
+    if (openYear === year) { setOpenYear(null); return; }
+    setOpenYear(year);
+    if (yearEvents[year]) return;
+    setLoadingEvents(year);
+    try {
+      const data: GalleryEvent[] = await fetch(`/api/gallery-events?year=${year}`).then(r => r.json()).then(d => Array.isArray(d) ? d : []);
+      setYearEvents(prev => ({ ...prev, [year]: data }));
+    } finally {
+      setLoadingEvents(null);
+    }
+  };
 
   return (
     <div className="flex flex-col">
+      {/* Hero */}
       <section className="py-16 sm:py-20 bg-secondary/5">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-3xl animate-slide-up">
-            <span className="text-xs sm:text-sm font-semibold text-primary uppercase tracking-wider">{t('events', 'tag')}</span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-2 mb-4 sm:mb-6 text-balance">{t('events', 'title')}</h1>
-            <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed">{t('events', 'desc')}</p>
+            <span className="text-xs sm:text-sm font-semibold text-primary uppercase tracking-wider">
+              {t('events', 'tag')}
+            </span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-2 mb-4 text-balance">
+              {t('events', 'title')}
+            </h1>
+            <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed">
+              {lang === 'hi'
+                ? '2009 से अब तक के सभी प्रमुख कार्यक्रमों की फ़ोटो और वीडियो।'
+                : 'Photos and videos from all major events and programmes since 2009.'}
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="py-14 sm:py-20">
-        <div className="container mx-auto px-4 lg:px-8 space-y-12 sm:space-y-16">
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {[1,2,3].map(i => <div key={i} className="rounded-2xl border border-border bg-card h-64 animate-pulse" />)}
+      {/* Year list */}
+      <section className="py-12 sm:py-16">
+        <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
+          {loadingYears ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="h-16 rounded-xl border border-border bg-card animate-pulse" />
+              ))}
             </div>
-          ) : sections.map((section) => (
-            <div key={section.label}>
-              <div className="flex items-center gap-3 mb-6 sm:mb-8">
-                <h2 className={`text-xl sm:text-2xl font-bold ${section.color}`}>{section.label}</h2>
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs sm:text-sm text-muted-foreground">{section.items.length}</span>
-              </div>
-              {section.items.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {section.items.map((event, i) => <Card key={event.id} event={event} i={i} />)}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">{section.empty}</p>
-              )}
+          ) : (
+            <div className="space-y-3">
+              {ALL_YEARS.map(year => {
+                const summary = getSummary(year);
+                const isOpen = openYear === year;
+                const events = Array.isArray(yearEvents[year]) ? yearEvents[year] : [];
+                const isLoading = loadingEvents === year;
+
+                return (
+                  <div
+                    key={year}
+                    className={`rounded-xl border transition-all duration-200 overflow-hidden
+                      ${isOpen ? 'border-primary/40 shadow-md' : 'border-border hover:border-primary/20'}`}
+                  >
+                    {/* Year row */}
+                    <button
+                      onClick={() => toggleYear(year)}
+                      className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors cursor-pointer
+                        ${isOpen ? 'bg-primary/5' : 'bg-card hover:bg-muted/50'}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className={`text-2xl sm:text-3xl font-bold tabular-nums ${isOpen ? 'text-primary' : ''}`}>
+                          {year}
+                        </span>
+                        {summary ? (
+                          <div className="flex flex-wrap gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
+                              <FolderOpen className="h-3 w-3" />
+                              {summary.event_count} {lang === 'hi' ? 'कार्यक्रम' : 'events'}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
+                              <ImageIcon className="h-3 w-3" />{summary.photo_count}
+                            </span>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
+                              <Video className="h-3 w-3" />{summary.video_count}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                      {isOpen
+                        ? <ChevronUp className="h-5 w-5 text-primary shrink-0" />
+                        : <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />}
+                    </button>
+
+                    {/* Expanded events */}
+                    {isOpen && (
+                      <div className="border-t border-border bg-muted/20 px-4 sm:px-5 py-4">
+                        {isLoading ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {[1, 2].map(i => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
+                          </div>
+                        ) : events.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-2">
+                            {lang === 'hi' ? 'इस वर्ष के लिए कोई कार्यक्रम नहीं।' : 'No events for this year yet.'}
+                          </p>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {events.map((ev, i) => (
+                              <Link
+                                key={ev.id}
+                                href={`/events/${ev.slug}`}
+                                className="group flex gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 hover:border-primary/40 hover:shadow-md transition-all animate-slide-up"
+                                style={{ animationDelay: `${i * 50}ms` }}
+                              >
+                                {ev.cover_url ? (
+                                  <div className="h-16 w-20 shrink-0 rounded-lg overflow-hidden bg-muted">
+                                    <img
+                                      src={ev.cover_url}
+                                      alt={ev.name}
+                                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                      loading="lazy"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="h-16 w-20 shrink-0 rounded-lg bg-muted flex items-center justify-center">
+                                    <Calendar className="h-6 w-6 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-1">
+                                    {ev.name}
+                                  </h3>
+                                  {ev.description && (
+                                    <p className="text-xs text-muted-foreground line-clamp-1 mb-1">{ev.description}</p>
+                                  )}
+                                  <div className="flex gap-2 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{ev.photo_count}</span>
+                                    <span className="flex items-center gap-1"><Video className="h-3 w-3" />{ev.video_count}</span>
+                                  </div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
       </section>
     </div>

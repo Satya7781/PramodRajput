@@ -423,9 +423,9 @@ INSERT INTO site_settings (key, value) VALUES
   ('hero_title',               '"Pramod Rajput"'),
   ('hero_tagline',             '"Dedicated to public service and community empowerment"'),
   ('about_text',               '""'),
-  ('facebook',                 '""'),
-  ('twitter',                  '""'),
-  ('instagram',                '""'),
+  ('facebook',                 '"https://www.facebook.com/pramodrajput.rajput.9/"'),
+  ('twitter',                  '"https://x.com/pramodrajput07"'),
+  ('instagram',                '"https://www.instagram.com/pramodrajput0214/?hl=en"'),
   ('youtube',                  '""')
 ON CONFLICT (key) DO NOTHING;
 

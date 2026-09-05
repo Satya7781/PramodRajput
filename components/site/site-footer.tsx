@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import { useSiteSettings } from '@/lib/site-settings-context';
 
@@ -14,10 +14,9 @@ export function SiteFooter() {
   const phone         = settings.contact_phone  ?? '';
   const phoneAlt      = settings.contact_phone_secondary ?? '';
   const address       = settings.contact_address ?? '';
-  const fbUrl         = settings.facebook  ?? '#';
-  const twUrl         = settings.twitter   ?? '#';
-  const igUrl         = settings.instagram ?? '#';
-  const ytUrl         = settings.youtube   ?? '#';
+  const fbUrl = settings.facebook  ?? 'https://www.facebook.com/pramodrajput.rajput.9/';
+  const twUrl = settings.twitter   ?? 'https://x.com/pramodrajput07';
+  const igUrl = settings.instagram ?? 'https://www.instagram.com/pramodrajput0214/?hl=en';
 
   // Derive initials from site name for the logo badge
   const initials = siteName
@@ -42,34 +41,15 @@ export function SiteFooter() {
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">{t('footer', 'tagline')}</p>
             <div className="flex items-center gap-3 mt-4">
-              {fbUrl && fbUrl !== '#' ? (
-                <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
-                  <Facebook className="h-5 w-5" />
-                </a>
-              ) : (
-                <span className="text-muted-foreground/40 cursor-not-allowed" aria-label="Facebook"><Facebook className="h-5 w-5" /></span>
-              )}
-              {twUrl && twUrl !== '#' ? (
-                <a href={twUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Twitter">
-                  <Twitter className="h-5 w-5" />
-                </a>
-              ) : (
-                <span className="text-muted-foreground/40 cursor-not-allowed" aria-label="Twitter"><Twitter className="h-5 w-5" /></span>
-              )}
-              {igUrl && igUrl !== '#' ? (
-                <a href={igUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
-                  <Instagram className="h-5 w-5" />
-                </a>
-              ) : (
-                <span className="text-muted-foreground/40 cursor-not-allowed" aria-label="Instagram"><Instagram className="h-5 w-5" /></span>
-              )}
-              {ytUrl && ytUrl !== '#' ? (
-                <a href={ytUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="YouTube">
-                  <Youtube className="h-5 w-5" />
-                </a>
-              ) : (
-                <span className="text-muted-foreground/40 cursor-not-allowed" aria-label="YouTube"><Youtube className="h-5 w-5" /></span>
-              )}
+              <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a href={twUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Twitter / X">
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a href={igUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
+                <Instagram className="h-5 w-5" />
+              </a>
             </div>
           </div>
 
@@ -89,8 +69,7 @@ export function SiteFooter() {
           <div>
             <h3 className="text-sm font-semibold mb-3">{t('footer', 'resources')}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/gallery/photos"     className="hover:text-primary transition-colors">{t('footer', 'photoGallery')}</Link></li>
-              <li><Link href="/gallery/videos"     className="hover:text-primary transition-colors">{t('nav', 'videos')}</Link></li>
+              <li><Link href="/events"             className="hover:text-primary transition-colors">{t('nav', 'events')}</Link></li>
               <li><Link href="/certificate/verify" className="hover:text-primary transition-colors">{t('footer', 'verifyCert')}</Link></li>
               <li><Link href="/contact"            className="hover:text-primary transition-colors">{t('nav', 'contact')}</Link></li>
             </ul>

@@ -1,129 +1,286 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, notFound } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, MapPin, Clock, Users, ArrowRight, Info, Loader2 } from 'lucide-react';
-import type { Event } from '@/lib/types';
+import { ArrowLeft, ImageIcon, Video, X, ChevronLeft, ChevronRight, Play, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
-import { formatDate, formatTime } from '@/lib/date-utils';
+
+interface GalleryEvent {
+  id: string;
+  year: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  cover_url: string | null;
+}
+
+interface GalleryMedia {
+  id: string;
+  event_id: string;
+  media_type: 'photo' | 'video';
+  url: string;
+  thumbnail: string | null;
+  caption: string | null;
+  sort_order: number;
+}
 
 export default function EventDetailPage() {
-  const params = useParams<{ slug: string }>();
-  const { lang, t } = useLanguage();
-  const [event, setEvent] = useState<Event | null>(null);
+  const { slug } = useParams<{ slug: string }>();
+  const { lang } = useLanguage();
+
+  const [event, setEvent] = useState<GalleryEvent | null>(null);
+  const [media, setMedia] = useState<GalleryMedia[]>([]);
   const [loading, setLoading] = useState(true);
-  const [notFoundState, setNotFoundState] = useState(false);
+  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
+
+  const photos = media.filter(m => m.media_type === 'photo');
+  const videos = media.filter(m => m.media_type === 'video');
 
   useEffect(() => {
-    if (!params?.slug) return;
-    fetch(`/api/events/slug/${encodeURIComponent(params.slug)}`)
-      .then(r => {
-        if (!r.ok) { setNotFoundState(true); setLoading(false); return null; }
-        return r.json();
+    if (!slug) return;
+    fetch(`/api/gallery-events/${slug}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(async ev => {
+        if (!ev) { setLoading(false); return; }
+        setEvent(ev);
+        const m = await fetch(`/api/gallery-events/${ev.id}/media`).then(r => r.ok ? r.json() : []);
+        setMedia(m);
+        setLoading(false);
       })
-      .then(data => { if (data) setEvent(data); setLoading(false); })
-      .catch(() => { setNotFoundState(true); setLoading(false); });
-  }, [params?.slug]);
+      .catch(() => setLoading(false));
+  }, [slug]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
+  // Keyboard nav for lightbox
+  useEffect(() => {
+    if (!lightbox.open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setLightbox(l => ({ ...l, index: Math.min(l.index + 1, photos.length - 1) }));
+      if (e.key === 'ArrowLeft')  setLightbox(l => ({ ...l, index: Math.max(l.index - 1, 0) }));
+      if (e.key === 'Escape')     setLightbox({ open: false, index: 0 });
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lightbox.open, photos.length]);
 
-  if (notFoundState || !event) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-2">{t('events', 'notFound')}</h1>
-        <Link href="/events" className="text-primary underline text-sm">{t('events', 'tag')}</Link>
+  const getYouTubeEmbed = (url: string) => {
+    const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+    return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    </div>
-  );
+    );
+  }
 
-  // Use bilingual fields if present, fall back to default
-  const title       = (lang === 'en' && (event as any).title_en)       ? (event as any).title_en       : event.title;
-  const description = (lang === 'en' && (event as any).description_en) ? (event as any).description_en : event.description;
-  const shortDesc   = (lang === 'en' && (event as any).short_description_en) ? (event as any).short_description_en : event.short_description;
-
-  const registrationOpen = event.registration_enabled && event.status === 'registration_open';
-  const regEnded = event.registration_end ? new Date() > new Date(event.registration_end) : false;
+  if (!event) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <h1 className="text-2xl font-bold">{lang === 'hi' ? 'कार्यक्रम नहीं मिला' : 'Event not found'}</h1>
+        <Link href="/events" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
+          <ArrowLeft className="h-4 w-4" />
+          {lang === 'hi' ? 'सभी कार्यक्रम' : 'All Events'}
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
-      <section className="relative h-64 sm:h-[380px] lg:h-[420px] overflow-hidden">
-        <div className="absolute inset-0">
-          {event.banner_url
-            ? <img src={event.banner_url} alt={title} className="h-full w-full object-cover" />
-            : <div className="h-full w-full bg-secondary/20" />}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
-        </div>
-        <div className="container relative z-10 mx-auto px-4 lg:px-8 h-full flex items-end pb-8 sm:pb-12">
-          <div className="max-w-3xl animate-slide-up">
-            <div className="flex flex-wrap gap-2 mb-3">
-              {event.status === 'registration_open' && (
-                <span className="rounded-full bg-secondary text-secondary-foreground px-3 py-0.5 text-xs font-medium">{t('events','regOpen')}</span>
-              )}
-              {event.certificate_enabled && (
-                <span className="rounded-full bg-white/20 border border-white/30 text-white px-3 py-0.5 text-xs font-medium">{t('events','certAvailable')}</span>
-              )}
-            </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 text-balance">{title}</h1>
-            <div className="flex flex-wrap items-center gap-3 text-white/80 text-xs sm:text-sm">
-              {event.start_date && <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />{formatDate(event.start_date, lang)}</span>}
-              {event.start_time && <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{formatTime(event.start_time)}</span>}
-              {event.venue      && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{event.venue}</span>}
-            </div>
+      {/* Hero */}
+      <section className={`relative overflow-hidden ${event.cover_url ? 'h-52 sm:h-72' : 'py-14 sm:py-20 bg-secondary/5'}`}>
+        {event.cover_url && (
+          <>
+            <img src={event.cover_url} alt={event.name} className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          </>
+        )}
+        <div className={`container mx-auto px-4 lg:px-8 ${event.cover_url ? 'relative z-10 h-full flex flex-col justify-end pb-8 sm:pb-10' : ''}`}>
+          <Link
+            href="/events"
+            className={`inline-flex items-center gap-1.5 text-sm mb-3 transition-colors ${event.cover_url ? 'text-white/70 hover:text-white' : 'text-muted-foreground hover:text-primary'}`}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {lang === 'hi' ? 'सभी कार्यक्रम' : 'All Events'}
+          </Link>
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-xs font-semibold rounded-full px-2.5 py-0.5 ${event.cover_url ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
+              {event.year}
+            </span>
+          </div>
+          <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold text-balance ${event.cover_url ? 'text-white' : ''}`}>
+            {event.name}
+          </h1>
+          {event.description && (
+            <p className={`mt-2 text-sm sm:text-base max-w-2xl leading-relaxed ${event.cover_url ? 'text-white/80' : 'text-muted-foreground'}`}>
+              {event.description}
+            </p>
+          )}
+          <div className={`flex gap-4 mt-3 text-sm ${event.cover_url ? 'text-white/70' : 'text-muted-foreground'}`}>
+            <span className="flex items-center gap-1.5"><ImageIcon className="h-4 w-4" />{photos.length} {lang === 'hi' ? 'फ़ोटो' : 'photos'}</span>
+            <span className="flex items-center gap-1.5"><Video className="h-4 w-4" />{videos.length} {lang === 'hi' ? 'वीडियो' : 'videos'}</span>
           </div>
         </div>
       </section>
 
-      <section className="py-14 sm:py-20">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-12">
-            <div className="lg:col-span-2 space-y-6">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">{t('events','aboutEvent')}</h2>
-                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line">
-                  {description || shortDesc}
-                </p>
-              </div>
-              {shortDesc && description && (
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <h3 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
-                    <Info className="h-4 w-4 text-primary" />{t('events','quickSummary')}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{shortDesc}</p>
-                </div>
-              )}
-            </div>
+      <div className="container mx-auto px-4 lg:px-8 max-w-5xl py-10 sm:py-14 space-y-12">
 
-            <div>
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 sticky top-20">
-                <h3 className="font-semibold mb-4 text-sm sm:text-base">{t('events','detailsCard')}</h3>
-                <dl className="space-y-4 text-xs sm:text-sm">
-                  {event.start_date && <div><dt className="text-muted-foreground flex items-center gap-1.5 mb-0.5"><Calendar className="h-3.5 w-3.5" />{t('events','startDate')}</dt><dd className="font-medium">{formatDate(event.start_date, lang)}</dd></div>}
-                  {event.end_date   && <div><dt className="text-muted-foreground flex items-center gap-1.5 mb-0.5"><Calendar className="h-3.5 w-3.5" />{t('events','endDate')}</dt><dd className="font-medium">{formatDate(event.end_date, lang)}</dd></div>}
-                  {event.start_time && <div><dt className="text-muted-foreground flex items-center gap-1.5 mb-0.5"><Clock className="h-3.5 w-3.5" />{t('events','time')}</dt><dd className="font-medium">{formatTime(event.start_time)}{event.end_time ? ` — ${formatTime(event.end_time)}` : ''}</dd></div>}
-                  {event.venue      && <div><dt className="text-muted-foreground flex items-center gap-1.5 mb-0.5"><MapPin className="h-3.5 w-3.5" />{t('events','venue')}</dt><dd className="font-medium">{event.venue}</dd></div>}
-                  {event.address    && <div><dt className="text-muted-foreground mb-0.5">{t('events','address')}</dt><dd className="font-medium">{event.address}</dd></div>}
-                  {event.max_participants && <div><dt className="text-muted-foreground flex items-center gap-1.5 mb-0.5"><Users className="h-3.5 w-3.5" />{t('events','capacity')}</dt><dd className="font-medium">{event.max_participants} {t('events','participants')}</dd></div>}
-                </dl>
-
-                {registrationOpen && !regEnded ? (
-                  <Link href={`/events/${event.slug}/register`} className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all active:scale-95">
-                    {t('events','registerBtn')} <ArrowRight className="h-4 w-4" />
-                  </Link>
-                ) : regEnded ? (
-                  <p className="mt-5 text-center text-xs sm:text-sm text-muted-foreground">{t('events','regDeadline')}</p>
-                ) : (
-                  <p className="mt-5 text-center text-xs sm:text-sm text-muted-foreground">{t('events','regUnavailable')}</p>
-                )}
-              </div>
+        {/* Photos */}
+        {photos.length > 0 && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-5 flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              {lang === 'hi' ? 'फ़ोटो' : 'Photos'}
+              <span className="text-sm font-normal text-muted-foreground">({photos.length})</span>
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {photos.map((p, i) => (
+                <button
+                  key={p.id}
+                  onClick={() => setLightbox({ open: true, index: i })}
+                  className="group relative aspect-square rounded-xl overflow-hidden bg-muted border border-border hover:border-primary/40 hover:shadow-lg transition-all animate-slide-up"
+                  style={{ animationDelay: `${i * 40}ms` }}
+                >
+                  <img
+                    src={p.url}
+                    alt={p.caption ?? `Photo ${i + 1}`}
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-400"
+                    loading="lazy"
+                  />
+                  {p.caption && (
+                    <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-xs p-1.5 line-clamp-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {p.caption}
+                    </div>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
+        )}
+
+        {/* Videos */}
+        {videos.length > 0 && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-5 flex items-center gap-2">
+              <Video className="h-5 w-5 text-primary" />
+              {lang === 'hi' ? 'वीडियो' : 'Videos'}
+              <span className="text-sm font-normal text-muted-foreground">({videos.length})</span>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              {videos.map((v, i) => {
+                const embedUrl = getYouTubeEmbed(v.url);
+                return (
+                  <div
+                    key={v.id}
+                    className="rounded-xl border border-border overflow-hidden bg-card animate-slide-up"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
+                    {embedUrl ? (
+                      <div className="aspect-video">
+                        <iframe
+                          src={embedUrl}
+                          title={v.caption ?? `Video ${i + 1}`}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="h-full w-full"
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-video bg-black flex items-center justify-center relative group">
+                        {v.thumbnail ? (
+                          <>
+                            <img src={v.thumbnail} alt={v.caption ?? ''} className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/30 transition-colors">
+                              <a
+                                href={v.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground hover:scale-110 transition-transform shadow-lg"
+                              >
+                                <Play className="h-6 w-6 ml-1" />
+                              </a>
+                            </div>
+                          </>
+                        ) : (
+                          <a
+                            href={v.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center gap-2 text-white hover:text-primary transition-colors"
+                          >
+                            <Play className="h-10 w-10" />
+                            <span className="text-xs">{lang === 'hi' ? 'वीडियो देखें' : 'Watch Video'}</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {v.caption && (
+                      <div className="px-4 py-2.5 text-sm text-muted-foreground">{v.caption}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {media.length === 0 && (
+          <div className="text-center py-20 text-muted-foreground">
+            <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">{lang === 'hi' ? 'अभी कोई मीडिया उपलब्ध नहीं है।' : 'No photos or videos uploaded yet.'}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox */}
+      {lightbox.open && photos.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 bg-black/92 flex items-center justify-center p-4"
+          onClick={() => setLightbox({ open: false, index: 0 })}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/40 rounded-full p-2"
+            onClick={() => setLightbox({ open: false, index: 0 })}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {lightbox.index > 0 && (
+            <button
+              className="absolute left-3 sm:left-6 text-white/80 hover:text-white bg-black/50 rounded-full p-2"
+              onClick={e => { e.stopPropagation(); setLightbox(l => ({ ...l, index: l.index - 1 })); }}
+            >
+              <ChevronLeft className="h-7 w-7" />
+            </button>
+          )}
+
+          <img
+            src={photos[lightbox.index].url}
+            alt={photos[lightbox.index].caption ?? ''}
+            className="max-h-[88vh] max-w-[88vw] object-contain rounded-lg shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+
+          {lightbox.index < photos.length - 1 && (
+            <button
+              className="absolute right-3 sm:right-6 text-white/80 hover:text-white bg-black/50 rounded-full p-2"
+              onClick={e => { e.stopPropagation(); setLightbox(l => ({ ...l, index: l.index + 1 })); }}
+            >
+              <ChevronRight className="h-7 w-7" />
+            </button>
+          )}
+
+          <div className="absolute bottom-4 text-white/60 text-sm select-none">
+            {lightbox.index + 1} / {photos.length}
+            {photos[lightbox.index].caption && (
+              <span className="ml-3 text-white/80">{photos[lightbox.index].caption}</span>
+            )}
+          </div>
         </div>
-      </section>
+      )}
     </div>
   );
 }

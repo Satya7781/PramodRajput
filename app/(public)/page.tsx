@@ -286,9 +286,18 @@ export default function HomePage() {
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-balance">{t('common', 'stayConnected')}</h2>
           <p className="text-primary-foreground/80 max-w-2xl mx-auto mb-6 sm:mb-8 text-sm sm:text-base">{t('common', 'followSocial')}</p>
           <div className="flex flex-wrap justify-center gap-3">
-            {['Facebook', 'Twitter', 'Instagram', 'YouTube'].map((s) => (
-              <a key={s} href="#" className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold hover:bg-white/20 transition-all active:scale-95">{s}</a>
-            ))}
+            <a href="https://www.facebook.com/pramodrajput.rajput.9/" target="_blank" rel="noopener noreferrer"
+              className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold hover:bg-white/20 transition-all active:scale-95">
+              Facebook
+            </a>
+            <a href="https://x.com/pramodrajput07" target="_blank" rel="noopener noreferrer"
+              className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold hover:bg-white/20 transition-all active:scale-95">
+              Twitter / X
+            </a>
+            <a href="https://www.instagram.com/pramodrajput0214/?hl=en" target="_blank" rel="noopener noreferrer"
+              className="rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-semibold hover:bg-white/20 transition-all active:scale-95">
+              Instagram
+            </a>
           </div>
         </div>
       </section>

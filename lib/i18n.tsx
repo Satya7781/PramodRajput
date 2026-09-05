@@ -19,6 +19,7 @@ export const translations = {
     videos:         { hi: 'वीडियो',             en: 'Videos' },
     contact:        { hi: 'संपर्क',             en: 'Contact' },
     memories:       { hi: 'यादें',              en: 'Memories' },
+    eventGallery:   { hi: 'कार्यक्रम गैलरी',    en: 'Event Gallery' },
   },
   common: {
     viewAll:        { hi: 'सभी देखें',           en: 'View All' },

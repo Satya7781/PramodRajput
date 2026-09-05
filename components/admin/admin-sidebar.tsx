@@ -9,8 +9,6 @@ import {
   ClipboardList,
   Award,
   Newspaper,
-  ImageIcon,
-  Video,
   Users,
   Settings,
   ScrollText,
@@ -18,6 +16,7 @@ import {
   Menu,
   X,
   BookOpen,
+  GalleryHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -25,12 +24,11 @@ import { cn } from '@/lib/utils';
 const adminNav = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/dashboard/events', label: 'Events', icon: CalendarDays },
+  { href: '/admin/dashboard/event-gallery', label: 'Event Gallery', icon: GalleryHorizontal },
   { href: '/admin/dashboard/memories', label: 'Memories', icon: BookOpen },
   { href: '/admin/dashboard/registrations', label: 'Registrations', icon: ClipboardList },
   { href: '/admin/dashboard/certificates', label: 'Certificates', icon: Award },
   { href: '/admin/dashboard/news', label: 'News', icon: Newspaper },
-  { href: '/admin/dashboard/photos', label: 'Photos', icon: ImageIcon },
-  { href: '/admin/dashboard/videos', label: 'Videos', icon: Video },
   { href: '/admin/dashboard/users', label: 'Users', icon: Users },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: Settings },
   { href: '/admin/dashboard/audit-logs', label: 'Audit Logs', icon: ScrollText },
@@ -38,10 +36,9 @@ const adminNav = [
 
 const editorNav = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/dashboard/event-gallery', label: 'Event Gallery', icon: GalleryHorizontal },
   { href: '/admin/dashboard/memories', label: 'Memories', icon: BookOpen },
   { href: '/admin/dashboard/news', label: 'News', icon: Newspaper },
-  { href: '/admin/dashboard/photos', label: 'Photos', icon: ImageIcon },
-  { href: '/admin/dashboard/videos', label: 'Videos', icon: Video },
 ];
 
 export function AdminSidebar({ userRole }: { userRole: 'admin' | 'editor' }) {
