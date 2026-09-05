@@ -173,9 +173,6 @@ export default function AboutPage() {
               <Link href="/journey" className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/15 border border-white/20 px-5 sm:px-6 py-3 text-sm font-semibold hover:bg-white/25 transition-all">
                 {t('about', 'viewJourney')} <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link href="/achievements" className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/15 border border-white/20 px-5 sm:px-6 py-3 text-sm font-semibold hover:bg-white/25 transition-all">
-                {t('about', 'viewAchievements')} <Award className="h-4 w-4" />
-              </Link>
             </div>
           </div>
         </div>

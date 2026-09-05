@@ -27,7 +27,6 @@ export function SiteHeader() {
     { href: '/',            labelKey: 'home' },
     { href: '/about',       labelKey: 'about' },
     { href: '/journey',     labelKey: 'journey' },
-    { href: '/achievements',labelKey: 'achievements' },
     {
       href: '/events',
       labelKey: 'events',

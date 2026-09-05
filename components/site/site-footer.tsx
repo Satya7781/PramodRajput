@@ -91,7 +91,6 @@ export function SiteFooter() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/gallery/photos"     className="hover:text-primary transition-colors">{t('footer', 'photoGallery')}</Link></li>
               <li><Link href="/gallery/videos"     className="hover:text-primary transition-colors">{t('nav', 'videos')}</Link></li>
-              <li><Link href="/achievements"       className="hover:text-primary transition-colors">{t('nav', 'achievements')}</Link></li>
               <li><Link href="/certificate/verify" className="hover:text-primary transition-colors">{t('footer', 'verifyCert')}</Link></li>
               <li><Link href="/contact"            className="hover:text-primary transition-colors">{t('nav', 'contact')}</Link></li>
             </ul>
