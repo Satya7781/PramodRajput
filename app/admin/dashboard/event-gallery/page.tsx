@@ -6,6 +6,7 @@ import {
   ImageIcon, Video, X, Loader2, FolderOpen
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { getAuthToken } from '@/lib/api-client';
 import { uploadToCloudinary, cloudinaryOptimized } from '@/lib/upload';
 
 interface GalleryEvent {
@@ -35,7 +36,8 @@ function slugify(str: string) {
 }
 
 export default function EventGalleryAdminPage() {
-  const { token } = useAuth();
+  const { user } = useAuth();
+  const token = getAuthToken();
   const authHeader = { Authorization: `Bearer ${token}` };
 
   // Year accordion
@@ -145,12 +147,11 @@ export default function EventGalleryAdminPage() {
   // Upload a file directly to Cloudinary from the browser
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !openEventId || !token) return;
-    setUploadingFile(true);
+    if (!file || !openEventId || !token) return;    setUploadingFile(true);
     setUploadProgress('Uploading to Cloudinary…');
     setMediaError('');
     try {
-      const result = await uploadToCloudinary(file, token, 'media');
+      const result = await uploadToCloudinary(file, token ?? '', 'media');
       setUploadUrl(result.url);
       setUploadProgress('');
     } catch (e: unknown) {
