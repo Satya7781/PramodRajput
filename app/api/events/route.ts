@@ -7,24 +7,62 @@ import { translateBatch, isHindi } from '@/lib/translate';
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const adminMode = searchParams.get('admin') === '1';
-    const statusFilter = searchParams.get('status');
+    const adminMode  = searchParams.get('admin') === '1';
+    const statusParam = searchParams.get('status'); // e.g. "ongoing,upcoming" or single value
+    const limitParam  = searchParams.get('limit');
 
     let sql = `SELECT * FROM events`;
     const params: unknown[] = [];
 
     if (!adminMode) {
-      if (statusFilter) {
-        sql += ` WHERE status = $1`;
-        params.push(statusFilter);
+      // Map friendly status names to DB status values
+      const STATUS_MAP: Record<string, string[]> = {
+        ongoing:  ['registration_open', 'published'],
+        upcoming: ['registration_open', 'published'],
+        published:['published'],
+        completed:['completed'],
+      };
+
+      if (statusParam) {
+        // Support comma-separated e.g. "ongoing,upcoming"
+        const requested = statusParam.split(',').map(s => s.trim());
+        // Collect matching DB statuses
+        const dbStatuses = new Set<string>();
+
+        // Check if any requested value is a raw DB status
+        const rawStatuses = ['draft','published','registration_open','registration_closed','completed','cancelled'];
+        for (const s of requested) {
+          if (rawStatuses.includes(s)) {
+            dbStatuses.add(s);
+          } else if (STATUS_MAP[s]) {
+            STATUS_MAP[s].forEach(v => dbStatuses.add(v));
+          }
+        }
+
+        if (dbStatuses.size > 0) {
+          const placeholders = [...dbStatuses].map((_, i) => `$${i + 1}`).join(',');
+          sql += ` WHERE status IN (${placeholders})`;
+          params.push(...dbStatuses);
+        } else {
+          sql += ` WHERE status IN ('published','registration_open','registration_closed','completed')`;
+        }
       } else {
         sql += ` WHERE status IN ('published','registration_open','registration_closed','completed')`;
       }
     } else {
-      if (statusFilter) { sql += ` WHERE status = $1`; params.push(statusFilter); }
+      if (statusParam && !statusParam.includes(',')) {
+        sql += ` WHERE status = $1`;
+        params.push(statusParam);
+      }
     }
 
-    sql += ` ORDER BY created_at DESC`;
+    sql += ` ORDER BY start_date ASC NULLS LAST, created_at DESC`;
+
+    if (limitParam) {
+      sql += ` LIMIT $${params.length + 1}`;
+      params.push(parseInt(limitParam, 10));
+    }
+
     const events = await query(sql, params);
     return ok(events);
   } catch (e) {
