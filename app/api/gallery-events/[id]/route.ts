@@ -8,14 +8,26 @@ type Params = { params: { id: string } };
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const { id } = params;
+
+    // Detect whether the param looks like a UUID or a slug
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
     const event = await queryOne(
-      `SELECT ge.*,
-              COUNT(gm.id) FILTER (WHERE gm.media_type = 'photo') AS photo_count,
-              COUNT(gm.id) FILTER (WHERE gm.media_type = 'video') AS video_count
-       FROM gallery_events ge
-       LEFT JOIN gallery_media gm ON gm.event_id = ge.id
-       WHERE ge.id = $1 OR ge.slug = $1
-       GROUP BY ge.id`,
+      isUuid
+        ? `SELECT ge.*,
+                  COUNT(gm.id) FILTER (WHERE gm.media_type = 'photo') AS photo_count,
+                  COUNT(gm.id) FILTER (WHERE gm.media_type = 'video') AS video_count
+           FROM gallery_events ge
+           LEFT JOIN gallery_media gm ON gm.event_id = ge.id
+           WHERE ge.id = $1
+           GROUP BY ge.id`
+        : `SELECT ge.*,
+                  COUNT(gm.id) FILTER (WHERE gm.media_type = 'photo') AS photo_count,
+                  COUNT(gm.id) FILTER (WHERE gm.media_type = 'video') AS video_count
+           FROM gallery_events ge
+           LEFT JOIN gallery_media gm ON gm.event_id = ge.id
+           WHERE ge.slug = $1
+           GROUP BY ge.id`,
       [id]
     );
     if (!event) return err('Not found', 404);
