@@ -3,9 +3,10 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   Plus, ChevronDown, ChevronUp, Trash2, Upload,
-  ImageIcon, Video, Pencil, X, Check, Loader2, FolderOpen
+  ImageIcon, Video, X, Loader2, FolderOpen
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { uploadToCloudinary, cloudinaryOptimized } from '@/lib/upload';
 
 interface GalleryEvent {
   id: string;
@@ -27,7 +28,7 @@ interface GalleryMedia {
   caption: string | null;
 }
 
-const ALL_YEARS = Array.from({ length: 2028 - 2009 + 1 }, (_, i) => 2028 - i);
+const ALL_YEARS = Array.from({ length: 2026 - 2009 + 1 }, (_, i) => 2026 - i);
 
 function slugify(str: string) {
   return str.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/[\s_]+/g, '-');
@@ -63,9 +64,10 @@ export default function EventGalleryAdminPage() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [mediaError, setMediaError] = useState('');
 
-  // File upload
+  // File upload — now via Cloudinary direct upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
 
   const loadYearEvents = async (year: number) => {
     if (yearEvents[year]) return;
@@ -140,18 +142,21 @@ export default function EventGalleryAdminPage() {
     setUploadUrl(''); setUploadCaption(''); setUploadThumbnail(''); setMediaError('');
   };
 
-  // Upload a file directly
+  // Upload a file directly to Cloudinary from the browser
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !openEventId) return;
+    if (!file || !openEventId || !token) return;
     setUploadingFile(true);
+    setUploadProgress('Uploading to Cloudinary…');
+    setMediaError('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', headers: authHeader, body: formData });
-      const data = await res.json();
-      if (!res.ok) { setMediaError(data.error ?? 'Upload failed'); return; }
-      setUploadUrl(data.url ?? '');
+      const result = await uploadToCloudinary(file, token, 'media');
+      setUploadUrl(result.url);
+      setUploadProgress('');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Upload failed';
+      setMediaError(msg);
+      setUploadProgress('');
     } finally {
       setUploadingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -349,25 +354,50 @@ export default function EventGalleryAdminPage() {
                                 <div className="flex gap-2">
                                   <input
                                     type="text"
-                                    placeholder={uploadType === 'photo' ? 'Image URL or upload below' : 'YouTube / video URL *'}
+                                    placeholder={uploadType === 'photo' ? 'Cloudinary URL or upload a file' : 'YouTube / video URL or upload a file'}
                                     value={uploadUrl}
                                     onChange={e => setUploadUrl(e.target.value)}
                                     className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                                   />
-                                  {uploadType === 'photo' && (
-                                    <>
-                                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-                                      <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={uploadingFile}
-                                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-medium hover:bg-muted/80 disabled:opacity-50"
-                                      >
-                                        {uploadingFile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                                        Upload
-                                      </button>
-                                    </>
-                                  )}
+                                  <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept={uploadType === 'photo' ? 'image/*' : 'video/*,image/*'}
+                                    className="hidden"
+                                    onChange={handleFileUpload}
+                                  />
+                                  <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingFile}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-medium hover:bg-muted/80 disabled:opacity-50 shrink-0"
+                                  >
+                                    {uploadingFile
+                                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      : <Upload className="h-3.5 w-3.5" />}
+                                    Upload
+                                  </button>
                                 </div>
+                                {uploadProgress && (
+                                  <p className="text-xs text-primary flex items-center gap-1.5">
+                                    <Loader2 className="h-3 w-3 animate-spin" /> {uploadProgress}
+                                  </p>
+                                )}
+                                {/* Preview uploaded image */}
+                                {uploadUrl && uploadType === 'photo' && uploadUrl.includes('cloudinary.com') && (
+                                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border bg-muted">
+                                    <img
+                                      src={cloudinaryOptimized(uploadUrl, 'w_200,h_200,c_fill,f_auto,q_auto')}
+                                      alt="Preview"
+                                      className="h-full w-full object-cover"
+                                    />
+                                    <button
+                                      onClick={() => setUploadUrl('')}
+                                      className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-destructive"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )}
                                 <input
                                   type="text"
                                   placeholder="Caption (optional)"
@@ -405,7 +435,12 @@ export default function EventGalleryAdminPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                                   {evPhotos.map(p => (
                                     <div key={p.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                                      <img src={p.url} alt={p.caption ?? ''} className="h-full w-full object-cover" loading="lazy" />
+                                      <img
+                                        src={cloudinaryOptimized(p.url, 'w_200,h_200,c_fill,f_auto,q_auto')}
+                                        alt={p.caption ?? ''}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                      />
                                       <button
                                         onClick={() => handleDeleteMedia(p.id, ev.id)}
                                         className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"

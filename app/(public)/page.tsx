@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   ArrowRight, Calendar, MapPin, Users, Award,
-  Newspaper, ImageIcon, Video as VideoIcon,
+  Newspaper, ImageIcon,
   Trophy, Heart, Target, TrendingUp,
 } from 'lucide-react';
-import type { Event, News, PhotoAlbum, Video } from '@/lib/types';
+import type { Event, News } from '@/lib/types';
 import { useLanguage } from '@/lib/i18n';
 import { formatDate } from '@/lib/date-utils';
 
@@ -15,18 +15,15 @@ export default function HomePage() {
   const { lang, t } = useLanguage();
   const [events, setEvents]   = useState<Event[]>([]);
   const [news, setNews]       = useState<News[]>([]);
-  const [albums, setAlbums]   = useState<PhotoAlbum[]>([]);
   const [ready, setReady]     = useState(false);
 
   useEffect(() => {
     Promise.allSettled([
       fetch('/api/events?limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/news?limit=3').then(r => r.ok ? r.json() : []),
-      fetch('/api/albums?limit=4').then(r => r.ok ? r.json() : []),
-    ]).then(([ev, nw, al]) => {
+    ]).then(([ev, nw]) => {
       setEvents(ev.status === 'fulfilled' ? ev.value : []);
       setNews(nw.status === 'fulfilled' ? nw.value : []);
-      setAlbums(al.status === 'fulfilled' ? al.value : []);
       setReady(true);
     });
   }, []);
@@ -245,36 +242,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Gallery Preview ── */}
+      {/* ── Gallery / Events CTA ── */}
       <section className="py-14 sm:py-20 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
+          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
             <span className="text-xs sm:text-sm font-semibold text-primary uppercase tracking-wider">{t('home', 'galleryTag')}</span>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-2 mb-3 sm:mb-4 text-balance">{t('home', 'galleryTitle')}</h2>
             <p className="text-sm sm:text-base text-muted-foreground">{t('home', 'galleryDesc')}</p>
           </div>
-          {albums.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-              {albums.map((album) => (
-                <Link key={album.id} href="/gallery/photos" className="group relative aspect-square rounded-xl overflow-hidden hover:shadow-lg transition-all">
-                  {album.cover_image_url
-                    ? <img src={album.cover_image_url} alt={album.title} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    : <div className="h-full w-full flex items-center justify-center bg-muted"><ImageIcon className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" /></div>}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2 sm:p-4">
-                    <h3 className="text-xs sm:text-sm font-semibold text-white line-clamp-2">{album.title}</h3>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center py-10 text-sm text-muted-foreground">{t('home', 'noAlbums')}</p>
-          )}
-          <div className="flex flex-col xs:flex-row justify-center gap-3 mt-6 sm:mt-8">
-            <Link href="/gallery/photos" className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 sm:px-5 py-2.5 text-sm font-medium hover:bg-card transition-colors">
-              <ImageIcon className="h-4 w-4" /> {t('common', 'viewPhotos')}
-            </Link>
-            <Link href="/gallery/videos" className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 sm:px-5 py-2.5 text-sm font-medium hover:bg-card transition-colors">
-              <VideoIcon className="h-4 w-4" /> {t('common', 'watchVideos')}
+          <div className="flex justify-center">
+            <Link href="/events" className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-6 py-3 text-sm font-semibold hover:bg-primary/90 transition-colors">
+              <ImageIcon className="h-4 w-4" /> {lang === 'hi' ? 'सभी कार्यक्रम देखें' : 'Browse All Events'}
             </Link>
           </div>
         </div>

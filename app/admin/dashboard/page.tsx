@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { stats as statsApi, auditLogs } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { CalendarDays, ClipboardList, Award, Newspaper, ImageIcon, Video, Users, TrendingUp, Loader2, BookOpen } from 'lucide-react';
+import { CalendarDays, ClipboardList, Award, Newspaper, Users, TrendingUp, Loader2, BookOpen } from 'lucide-react';
 import { formatDate } from '@/lib/date-utils';
 
 interface DashboardStats {
@@ -46,15 +46,13 @@ export default function DashboardPage() {
   }
 
   const statCards = [
-    { label: 'Total Events', value: stats?.totalEvents || 0, icon: CalendarDays, color: 'text-primary' },
-    { label: 'Active Events', value: stats?.activeEvents || 0, icon: TrendingUp, color: 'text-secondary' },
-    { label: 'Total Registrations', value: stats?.totalRegistrations || 0, icon: ClipboardList, color: 'text-primary' },
-    { label: 'Pending Registrations', value: stats?.pendingRegistrations || 0, icon: ClipboardList, color: 'text-accent' },
-    { label: 'Certificates Generated', value: stats?.certificatesGenerated || 0, icon: Award, color: 'text-secondary' },
-    { label: 'Memories Published', value: stats?.memories || 0, icon: BookOpen, color: 'text-primary' },
-    { label: 'News Articles', value: stats?.newsArticles || 0, icon: Newspaper, color: 'text-primary' },
-    { label: 'Photo Albums', value: stats?.photoAlbums || 0, icon: ImageIcon, color: 'text-accent' },
-    { label: 'Videos', value: stats?.videos || 0, icon: Video, color: 'text-secondary' },
+    { label: 'Total Events',          value: stats?.totalEvents || 0,           icon: CalendarDays,  color: 'text-primary' },
+    { label: 'Active Events',         value: stats?.activeEvents || 0,          icon: TrendingUp,    color: 'text-secondary' },
+    { label: 'Total Registrations',   value: stats?.totalRegistrations || 0,    icon: ClipboardList, color: 'text-primary' },
+    { label: 'Pending Registrations', value: stats?.pendingRegistrations || 0,  icon: ClipboardList, color: 'text-accent' },
+    { label: 'Certificates Issued',   value: stats?.certificatesGenerated || 0, icon: Award,         color: 'text-secondary' },
+    { label: 'Memories Published',    value: stats?.memories || 0,              icon: BookOpen,      color: 'text-primary' },
+    { label: 'News Articles',         value: stats?.newsArticles || 0,          icon: Newspaper,     color: 'text-primary' },
   ];
 
   return (

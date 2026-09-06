@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 import { ok, err, requireEditor, isResponse } from '@/lib/api-helpers';
-import { writeFile, mkdir } from 'fs/promises';
-import { join, extname } from 'path';
-import { randomBytes } from 'crypto';
+import cloudinary from '@/lib/cloudinary';
 
-const ALLOWED_TYPES = [
-  'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
+const ALLOWED_MIME = [
+  'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+  'image/gif', 'image/svg+xml',
+  'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
 ];
-const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_SIZE = 100 * 1024 * 1024; // 100 MB (Cloudinary free hard cap)
 
 export async function POST(req: NextRequest) {
   const authResult = requireEditor(req);
@@ -18,29 +18,40 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File | null;
 
     if (!file) return err('No file uploaded');
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return err(`File type not allowed. Allowed: ${ALLOWED_TYPES.join(', ')}`);
+    if (!ALLOWED_MIME.includes(file.type)) {
+      return err(`File type not allowed: ${file.type}`);
     }
     if (file.size > MAX_SIZE) {
-      return err('File size exceeds 10MB limit');
+      return err('File exceeds 100 MB limit');
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // Convert File → base64 data URI for Cloudinary SDK upload
+    const bytes  = await file.arrayBuffer();
+    const base64 = Buffer.from(bytes).toString('base64');
+    const dataUri = `data:${file.type};base64,${base64}`;
 
-    // Create unique filename
-    const ext = extname(file.name) || '.jpg';
-    const filename = `${randomBytes(16).toString('hex')}${ext}`;
+    const isVideo     = file.type.startsWith('video/');
+    const resourceType: 'image' | 'video' | 'auto' = isVideo ? 'video' : 'image';
 
-    // Store in /public/uploads/
-    const uploadDir = join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(join(uploadDir, filename), buffer);
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder:        'media',
+      resource_type: resourceType,
+      // Auto quality + format on delivery — saves bandwidth credits
+      transformation: isVideo
+        ? [{ quality: 'auto' }]
+        : [{ quality: 'auto', fetch_format: 'auto' }],
+    });
 
-    const url = `/uploads/${filename}`;
-    return ok({ url, filename, size: file.size, type: file.type });
+    return ok({
+      url:          result.secure_url,
+      publicId:     result.public_id,
+      resourceType: result.resource_type,
+      width:        result.width,
+      height:       result.height,
+      bytes:        result.bytes,
+    });
   } catch (e) {
-    console.error('Upload error:', e);
+    console.error('Cloudinary upload error:', e);
     return err('Upload failed', 500);
   }
 }
