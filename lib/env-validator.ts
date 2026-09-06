@@ -7,41 +7,15 @@
 interface EnvVar {
   key: string;
   required: boolean;
-  insecureDefaults?: string[]; // Warn if the value matches these in production
+  insecureDefaults?: string[];
   description: string;
 }
 
 const ENV_SPEC: EnvVar[] = [
   {
-    key: 'NEXT_PUBLIC_APP_URL',
+    key: 'DATABASE_URL',
     required: true,
-    description: 'Base URL for the application (used for SSR fetch and file URL generation)',
-  },
-  {
-    key: 'DB_HOST',
-    required: true,
-    description: 'PostgreSQL host',
-  },
-  {
-    key: 'DB_PORT',
-    required: false,
-    description: 'PostgreSQL port (default: 5432)',
-  },
-  {
-    key: 'DB_NAME',
-    required: true,
-    description: 'PostgreSQL database name',
-  },
-  {
-    key: 'DB_USER',
-    required: true,
-    description: 'PostgreSQL user',
-  },
-  {
-    key: 'DB_PASSWORD',
-    required: true,
-    insecureDefaults: ['change_this_strong_password', '', 'password', 'postgres'],
-    description: 'PostgreSQL password',
+    description: 'Neon PostgreSQL connection string',
   },
   {
     key: 'JWT_SECRET',
@@ -57,6 +31,11 @@ const ENV_SPEC: EnvVar[] = [
     key: 'JWT_EXPIRES_IN',
     required: false,
     description: 'JWT token expiry (default: 7d)',
+  },
+  {
+    key: 'CLOUDINARY_CLOUD_NAME',
+    required: false,
+    description: 'Cloudinary cloud name for media uploads',
   },
 ];
 
@@ -75,7 +54,6 @@ export function validateEnv(): void {
 
     if (value && spec.insecureDefaults?.includes(value)) {
       if (isProduction) {
-        // In production, insecure defaults are a hard error
         missing.push(`  ✗ ${spec.key} is set to an insecure default value. Change it before deploying.`);
       } else {
         warnings.push(`  ⚠ ${spec.key} is using a placeholder value — OK for dev, must change for production.`);
