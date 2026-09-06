@@ -6,8 +6,8 @@
 -- 1. Create database and user
 -- (run these outside a transaction if needed)
 -- CREATE DATABASE pramod_rajput;
--- CREATE USER pramod_user WITH ENCRYPTED PASSWORD 'change_this_strong_password';
--- GRANT ALL PRIVILEGES ON DATABASE pramod_rajput TO pramod_user;
+-- CREATE USER neondb_owner WITH ENCRYPTED PASSWORD 'change_this_strong_password';
+-- GRANT ALL PRIVILEGES ON DATABASE pramod_rajput TO neondb_owner;
 -- \c pramod_rajput
 
 -- Switch to the database before running the rest:
@@ -392,11 +392,11 @@ $$;
 -- ============================================================
 -- GRANT PRIVILEGES TO APP USER
 -- ============================================================
-GRANT USAGE ON SCHEMA public TO pramod_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO pramod_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO pramod_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO pramod_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO pramod_user;
+GRANT USAGE ON SCHEMA public TO neondb_owner;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO neondb_owner;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO neondb_owner;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO neondb_owner;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO neondb_owner;
 
 -- ============================================================
 -- DEFAULT SEED DATA
@@ -506,6 +506,6 @@ CREATE TRIGGER trg_updated_at
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- Grant to app user
-GRANT ALL PRIVILEGES ON event_memories  TO pramod_user;
-GRANT ALL PRIVILEGES ON memory_photos   TO pramod_user;
-GRANT ALL PRIVILEGES ON memory_videos   TO pramod_user;
+GRANT ALL PRIVILEGES ON event_memories  TO neondb_owner;
+GRANT ALL PRIVILEGES ON memory_photos   TO neondb_owner;
+GRANT ALL PRIVILEGES ON memory_videos   TO neondb_owner;

@@ -4,20 +4,23 @@ let pool: Pool | null = null;
 
 export function getPool(): Pool {
   if (!pool) {
+    const connectionString = process.env.DATABASE_URL;
+
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+
     pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      database: process.env.DB_NAME || 'pramod_rajput',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || '',
-      max: 20,
+      connectionString,
+      // Neon requires SSL with full verification
+      ssl: { rejectUnauthorized: false },
+      max: 10,                    // Neon free tier supports limited concurrent connections
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      connectionTimeoutMillis: 5000,
     });
 
     pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
+      console.error('Unexpected error on idle DB client', err);
     });
   }
   return pool;

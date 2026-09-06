@@ -1,49 +1,37 @@
-/**
- * Create the first admin user in the database.
- * Usage: node database/create-admin.js
- *
- * Set environment variables first (or edit the values below):
- *   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, JWT_SECRET
- */
-
-require('dotenv').config({ path: '.env' });
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
-const readline = require('readline');
 
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'pramod_rajput',
-  user: process.env.DB_USER || 'pramod_user',
-  password: process.env.DB_PASSWORD || '',
+  connectionString: process.env.DATABASE_URL ||
+    'postgresql://neondb_owner:npg_eF7CHLRUq4XM@ep-calm-pond-ax0p1bu0-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require',
+  ssl: { rejectUnauthorized: false },
 });
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise((res) => rl.question(q, res));
-
-async function main() {
-  console.log('\n=== Create Admin User ===\n');
-  const fullName = await ask('Full name: ');
-  const email    = await ask('Email: ');
-  const password = await ask('Password (min 8 chars): ');
-
-  if (password.length < 8) { console.error('Password too short.'); process.exit(1); }
-
-  const hash = await bcrypt.hash(password, 10);
-
-  const { rows } = await pool.query(
+async function createAdmin() {
+  const hash = await bcrypt.hash('Admin@2024!', 12);
+  const res = await pool.query(
     `INSERT INTO profiles (full_name, email, password_hash, role, is_active)
-     VALUES ($1, $2, $3, 'admin', true)
-     ON CONFLICT (email) DO UPDATE SET password_hash=$3, role='admin', is_active=true, updated_at=now()
-     RETURNING id, email, role`,
-    [fullName.trim(), email.trim().toLowerCase(), hash]
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (email) DO UPDATE
+       SET password_hash = EXCLUDED.password_hash,
+           role          = EXCLUDED.role,
+           is_active     = TRUE,
+           updated_at    = now()
+     RETURNING id, email, full_name, role`,
+    ['Pramod Rajput', 'admin@pramodrajput.in', hash, 'admin', true]
   );
-
-  console.log('\n✓ Admin user created/updated:');
-  console.table(rows);
-  rl.close();
-  await pool.end();
+  console.log('Admin user ready:');
+  console.log('  Email   :', res.rows[0].email);
+  console.log('  Name    :', res.rows[0].full_name);
+  console.log('  Role    :', res.rows[0].role);
+  console.log('  Password: Admin@2024!');
+  console.log('');
+  console.log('Login at: http://localhost:3000/admin');
+  pool.end();
 }
 
-main().catch((e) => { console.error(e.message); process.exit(1); });
+createAdmin().catch(e => {
+  console.error('Error:', e.message);
+  pool.end();
+  process.exit(1);
+});
