@@ -26,23 +26,23 @@ export async function GET(req: NextRequest) {
       if (statusParam) {
         // Support comma-separated e.g. "ongoing,upcoming"
         const requested = statusParam.split(',').map(s => s.trim());
-        // Collect matching DB statuses
-        const dbStatuses = new Set<string>();
+        // Collect matching DB statuses using a plain array to avoid Set iteration issues
+        const dbStatusArr: string[] = [];
+        const addStatus = (s: string) => { if (!dbStatusArr.includes(s)) dbStatusArr.push(s); };
 
-        // Check if any requested value is a raw DB status
         const rawStatuses = ['draft','published','registration_open','registration_closed','completed','cancelled'];
         for (const s of requested) {
           if (rawStatuses.includes(s)) {
-            dbStatuses.add(s);
+            addStatus(s);
           } else if (STATUS_MAP[s]) {
-            STATUS_MAP[s].forEach(v => dbStatuses.add(v));
+            STATUS_MAP[s].forEach(v => addStatus(v));
           }
         }
 
-        if (dbStatuses.size > 0) {
-          const placeholders = [...dbStatuses].map((_, i) => `$${i + 1}`).join(',');
+        if (dbStatusArr.length > 0) {
+          const placeholders = dbStatusArr.map((_, i) => `$${i + 1}`).join(',');
           sql += ` WHERE status IN (${placeholders})`;
-          params.push(...dbStatuses);
+          params.push(...dbStatusArr);
         } else {
           sql += ` WHERE status IN ('published','registration_open','registration_closed','completed')`;
         }
