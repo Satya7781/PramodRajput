@@ -54,48 +54,48 @@ export default function HomePage() {
             className="h-full w-full object-cover object-center"
             loading="eager"
           />
-          {/* Left side: light so Pramod is visible. Right side: dark for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-l from-black/92 via-black/55 to-black/10" />
+          {/* Strong dark overlay on left for text readability, lighter on right to show image */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/88 via-black/70 to-black/30" />
           {/* Bottom fade */}
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        {/* Content — aligned to the RIGHT so the photo is prominent on the left */}
-        <div className="container relative z-10 mx-auto px-4 lg:px-8 py-20 sm:py-24 flex justify-end">
-          <div className="w-full max-w-lg sm:max-w-xl">
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary/25 backdrop-blur-sm border border-primary/30 px-4 py-1.5 text-xs sm:text-sm font-medium text-white mb-5 sm:mb-6 animate-fade-in">
+        {/* Content — LEFT aligned */}
+        <div className="container relative z-10 mx-auto px-4 lg:px-8 py-20 sm:py-24">
+          <div className="w-full max-w-xl">
+            <span className="inline-flex items-center gap-2 rounded-full bg-primary/30 backdrop-blur-sm border border-primary/40 px-4 py-1.5 text-xs sm:text-sm font-semibold text-white mb-5 sm:mb-6 animate-fade-in">
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
               {t('home', 'heroTag')}
             </span>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.08] text-balance mb-4 sm:mb-5 animate-slide-up">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.08] text-balance mb-4 sm:mb-5 animate-slide-up drop-shadow-lg">
               {t('home', 'heroTitle')}
             </h1>
 
-            {/* Positions row */}
+            {/* Position badges */}
             <div className="flex flex-wrap gap-2 mb-5 sm:mb-6 animate-slide-up" style={{ animationDelay: '60ms' }}>
-              <span className="inline-flex items-center rounded-full bg-white/15 backdrop-blur-sm border border-white/20 px-3 py-1 text-xs text-white font-medium">
+              <span className="inline-flex items-center rounded-full bg-white/20 backdrop-blur-sm border border-white/30 px-3 py-1 text-xs text-white font-semibold">
                 {lang === 'hi' ? 'जनपद अध्यक्ष — फन्दा' : 'Janpad President · Fanda'}
               </span>
-              <span className="inline-flex items-center rounded-full bg-primary/30 backdrop-blur-sm border border-primary/40 px-3 py-1 text-xs text-white font-medium">
+              <span className="inline-flex items-center rounded-full bg-primary/40 backdrop-blur-sm border border-primary/50 px-3 py-1 text-xs text-white font-semibold">
                 {lang === 'hi' ? 'मंडल अध्यक्ष — भाजपा' : 'Mandal President · BJP'}
               </span>
             </div>
 
-            <p className="text-sm sm:text-base text-white/80 leading-relaxed mb-7 sm:mb-9 animate-slide-up" style={{ animationDelay: '100ms' }}>
+            <p className="text-sm sm:text-base lg:text-lg text-white/90 leading-relaxed mb-7 sm:mb-9 animate-slide-up drop-shadow-sm" style={{ animationDelay: '100ms' }}>
               {t('home', 'heroDesc')}
             </p>
 
             <div className="flex flex-col xs:flex-row flex-wrap gap-3 animate-slide-up" style={{ animationDelay: '160ms' }}>
               <Link
                 href="/about"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 active:scale-95 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/40 hover:bg-primary/90 active:scale-95 transition-all"
               >
                 {t('home', 'heroBtn1')} <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/events"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/12 backdrop-blur-sm border border-white/25 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/22 active:scale-95 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/15 backdrop-blur-sm border border-white/30 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/25 active:scale-95 transition-all"
               >
                 <Calendar className="h-4 w-4" /> {t('home', 'heroBtn2')}
               </Link>
@@ -126,8 +126,8 @@ export default function HomePage() {
             <div className="relative order-2 lg:order-1">
               <div className="aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
                 <img
-                  src="https://images.pexels.com/photos/34755223/pexels-photo-34755223.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                  alt="Community gathering"
+                  src="https://res.cloudinary.com/tjbdnxlr/image/upload/f_auto,q_auto,w_1200/v1788761188/site/pramod-public-intro.jpg"
+                  alt="Pramod Rajput with the community"
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />
