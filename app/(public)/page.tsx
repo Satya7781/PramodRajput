@@ -48,7 +48,7 @@ export default function HomePage() {
       <section className="relative min-h-[560px] sm:min-h-[640px] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.pexels.com/photos/15470221/pexels-photo-15470221.jpeg?auto=compress&cs=tinysrgb&w=1920"
+            src="https://res.cloudinary.com/tjbdnxlr/image/upload/f_auto,q_auto/v1788760473/site/hero-pramod-rajput.jpg"
             alt="Pramod Rajput addressing a public gathering"
             className="h-full w-full object-cover"
             loading="eager"
