@@ -34,8 +34,8 @@ export default function NewsPage() {
       fetch('/api/news').then(r => r.ok ? r.json() : []),
       fetch('/api/news/categories').then(r => r.ok ? r.json() : []),
     ]).then(([nw, cats]) => {
-      setArticles(Array.isArray(nw.status === 'fulfilled' ? nw.value : []) ? nw.value : []);
-      setCategories(Array.isArray(cats.status === 'fulfilled' ? cats.value : []) ? cats.value : []);
+      setArticles(nw.status === 'fulfilled' && Array.isArray(nw.value) ? nw.value : []);
+      setCategories(cats.status === 'fulfilled' && Array.isArray(cats.value) ? cats.value : []);
       setLoading(false);
     });
   }, []);
