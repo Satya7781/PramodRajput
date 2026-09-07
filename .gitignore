@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local image uploads — use Cloudinary instead
+database/*.jpg
+database/*.jpeg
+database/*.png
+database/*.webp
