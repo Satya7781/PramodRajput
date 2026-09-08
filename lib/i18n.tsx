@@ -372,7 +372,6 @@ export const translations = {
     builtWith:   { hi: 'समुदाय के लिए समर्पण के साथ बनाया गया।', en: 'Built with dedication for the community.' },
     devLabel:    { hi: 'वेबसाइट डेवलपर', en: 'Website Developer' },
     devQuote:    { hi: 'आपका सपना, हमारी कोड — हर विचार को डिजिटल हकीकत बनाते हैं।', en: 'Your vision, our code — we turn every idea into digital reality.' },
-    devCta:      { hi: 'अगर आप भी अपनी वेबसाइट बनवाना चाहते हैं तो संपर्क करें।', en: 'Want a website like this? Get in touch and let\'s build it together.' },
   },
 } as const;
 

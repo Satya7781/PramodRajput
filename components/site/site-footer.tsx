@@ -127,9 +127,6 @@ export function SiteFooter() {
               <p className="text-xs text-muted-foreground italic leading-relaxed">
                 "{t('footer', 'devQuote')}"
               </p>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {t('footer', 'devCta')}
-              </p>
             </div>
           </div>
 
