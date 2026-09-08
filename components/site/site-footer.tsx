@@ -107,11 +107,39 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground text-center sm:text-left">
-            © {new Date().getFullYear()} {siteName} Digital Platform. {t('footer', 'rights')}
-          </p>
-          <p className="text-xs text-muted-foreground text-center sm:text-right">{t('footer', 'builtWith')}</p>
+        <div className="mt-8 pt-6 border-t border-border space-y-4">
+
+          {/* Developer credit */}
+          <div className="rounded-xl bg-muted/40 border border-border px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                {t('footer', 'devLabel')}
+              </p>
+              <p className="text-sm font-bold text-foreground">Satyanarayan Chouhan</p>
+              <a
+                href="tel:9302044230"
+                className="text-sm text-primary hover:underline font-medium"
+              >
+                +91 93020 44230
+              </a>
+            </div>
+            <div className="sm:text-right max-w-xs">
+              <p className="text-xs text-muted-foreground italic leading-relaxed">
+                "{t('footer', 'devQuote')}"
+              </p>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {t('footer', 'devCta')}
+              </p>
+            </div>
+          </div>
+
+          {/* Copyright row */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground text-center sm:text-left">
+              © {new Date().getFullYear()} {siteName} Digital Platform. {t('footer', 'rights')}
+            </p>
+            <p className="text-xs text-muted-foreground text-center sm:text-right">{t('footer', 'builtWith')}</p>
+          </div>
         </div>
       </div>
     </footer>
