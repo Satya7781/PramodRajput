@@ -1,92 +1,91 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Plus, ChevronDown, ChevronUp, Trash2, Upload,
-  ImageIcon, Video, X, Loader2, FolderOpen
+  ImageIcon, Video, X, Loader2, FolderOpen, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getAuthToken } from '@/lib/api-client';
 import { uploadToCloudinary, cloudinaryOptimized } from '@/lib/upload';
 
+/* ─── Types ────────────────────────────────────────────────────── */
 interface GalleryEvent {
-  id: string;
-  year: number;
-  name: string;
-  slug: string;
-  description: string | null;
-  cover_url: string | null;
-  photo_count: string;
-  video_count: string;
+  id: string; year: number; name: string; slug: string;
+  description: string | null; cover_url: string | null;
+  photo_count: string; video_count: string;
+}
+interface GalleryMedia {
+  id: string; event_id: string; media_type: 'photo' | 'video';
+  url: string; thumbnail: string | null; caption: string | null;
 }
 
-interface GalleryMedia {
-  id: string;
-  event_id: string;
-  media_type: 'photo' | 'video';
-  url: string;
-  thumbnail: string | null;
-  caption: string | null;
+/* Per-file upload state */
+type FileStatus = 'pending' | 'uploading' | 'done' | 'error';
+interface QueueItem {
+  id: string;           // local random id
+  file: File;
+  preview: string;      // object URL
+  status: FileStatus;
+  progress: string;
+  cloudUrl: string;
+  error: string;
 }
 
 const ALL_YEARS = Array.from({ length: 2026 - 2009 + 1 }, (_, i) => 2026 - i);
+const MAX_FILES = 10;
 
 function slugify(str: string) {
   return str.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/[\s_]+/g, '-');
 }
 
+/* ─── Main component ─────────────────────────────────────────── */
 export default function EventGalleryAdminPage() {
   const { user } = useAuth();
   const token = getAuthToken();
   const authHeader = { Authorization: `Bearer ${token}` };
 
-  // Year accordion
-  const [openYear, setOpenYear] = useState<number | null>(null);
+  const [openYear, setOpenYear]     = useState<number | null>(null);
   const [yearEvents, setYearEvents] = useState<Record<number, GalleryEvent[]>>({});
   const [loadingYear, setLoadingYear] = useState<number | null>(null);
 
-  // New event form
   const [newEventYear, setNewEventYear] = useState<number | null>(null);
   const [newEventName, setNewEventName] = useState('');
   const [newEventSlug, setNewEventSlug] = useState('');
   const [newEventDesc, setNewEventDesc] = useState('');
-  const [savingEvent, setSavingEvent] = useState(false);
-  const [eventError, setEventError] = useState('');
+  const [savingEvent, setSavingEvent]   = useState(false);
+  const [eventError, setEventError]     = useState('');
 
-  // Open event for media management
-  const [openEventId, setOpenEventId] = useState<string | null>(null);
-  const [eventMedia, setEventMedia] = useState<Record<string, GalleryMedia[]>>({});
+  const [openEventId, setOpenEventId]   = useState<string | null>(null);
+  const [eventMedia, setEventMedia]     = useState<Record<string, GalleryMedia[]>>({});
   const [loadingMedia, setLoadingMedia] = useState<string | null>(null);
 
-  // Media upload
-  const [uploadType, setUploadType] = useState<'photo' | 'video'>('photo');
-  const [uploadUrl, setUploadUrl] = useState('');
-  const [uploadCaption, setUploadCaption] = useState('');
-  const [uploadThumbnail, setUploadThumbnail] = useState('');
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [mediaError, setMediaError] = useState('');
+  /* ── Bulk photo queue ── */
+  const [photoQueue, setPhotoQueue]     = useState<QueueItem[]>([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkDone, setBulkDone]         = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
-  // File upload — now via Cloudinary direct upload
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState('');
+  /* ── Single video ── */
+  const [videoUrl, setVideoUrl]           = useState('');
+  const [videoCaption, setVideoCaption]   = useState('');
+  const [videoThumbnail, setVideoThumbnail] = useState('');
+  const [savingVideo, setSavingVideo]     = useState(false);
+  const [videoError, setVideoError]       = useState('');
 
+  /* ─── Year / event loaders ─────────────────────────────────── */
   const loadYearEvents = async (year: number) => {
     if (yearEvents[year]) return;
     setLoadingYear(year);
     try {
       const data: GalleryEvent[] = await fetch(`/api/gallery-events?year=${year}`, { headers: authHeader }).then(r => r.json());
-      setYearEvents(prev => ({ ...prev, [year]: data }));
-    } finally {
-      setLoadingYear(null);
-    }
+      setYearEvents(prev => ({ ...prev, [year]: Array.isArray(data) ? data : [] }));
+    } finally { setLoadingYear(null); }
   };
 
   const toggleYear = (year: number) => {
     if (openYear === year) { setOpenYear(null); return; }
-    setOpenYear(year);
-    loadYearEvents(year);
-    setNewEventYear(null);
+    setOpenYear(year); loadYearEvents(year); setNewEventYear(null);
   };
 
   const handleCreateEvent = async () => {
@@ -96,33 +95,22 @@ export default function EventGalleryAdminPage() {
       const res = await fetch('/api/gallery-events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
-        body: JSON.stringify({
-          year: newEventYear,
-          name: newEventName.trim(),
-          slug: newEventSlug || slugify(newEventName),
-          description: newEventDesc || null,
-        }),
+        body: JSON.stringify({ year: newEventYear, name: newEventName.trim(), slug: newEventSlug || slugify(newEventName), description: newEventDesc || null }),
       });
       const data = await res.json();
-      if (!res.ok) { setEventError(data.error ?? 'Failed to create'); return; }
-      // Refresh year events
+      if (!res.ok) { setEventError(data.error ?? 'Failed'); return; }
       setYearEvents(prev => {
         const existing = prev[newEventYear] ?? [];
         return { ...prev, [newEventYear]: [...existing, { ...data, photo_count: '0', video_count: '0' }] };
       });
       setNewEventName(''); setNewEventSlug(''); setNewEventDesc(''); setNewEventYear(null);
-    } finally {
-      setSavingEvent(false);
-    }
+    } finally { setSavingEvent(false); }
   };
 
   const handleDeleteEvent = async (eventId: string, year: number) => {
     if (!confirm('Delete this event and all its media?')) return;
     await fetch(`/api/gallery-events/${eventId}`, { method: 'DELETE', headers: authHeader });
-    setYearEvents(prev => ({
-      ...prev,
-      [year]: (prev[year] ?? []).filter(e => e.id !== eventId),
-    }));
+    setYearEvents(prev => ({ ...prev, [year]: (prev[year] ?? []).filter(e => e.id !== eventId) }));
     if (openEventId === eventId) setOpenEventId(null);
   };
 
@@ -131,82 +119,145 @@ export default function EventGalleryAdminPage() {
     setLoadingMedia(eventId);
     try {
       const data: GalleryMedia[] = await fetch(`/api/gallery-events/${eventId}/media`, { headers: authHeader }).then(r => r.json());
-      setEventMedia(prev => ({ ...prev, [eventId]: data }));
-    } finally {
-      setLoadingMedia(null);
-    }
+      setEventMedia(prev => ({ ...prev, [eventId]: Array.isArray(data) ? data : [] }));
+    } finally { setLoadingMedia(null); }
   };
 
   const toggleEvent = (eventId: string) => {
     if (openEventId === eventId) { setOpenEventId(null); return; }
-    setOpenEventId(eventId);
-    loadMedia(eventId);
-    setUploadUrl(''); setUploadCaption(''); setUploadThumbnail(''); setMediaError('');
+    setOpenEventId(eventId); loadMedia(eventId);
+    setPhotoQueue([]); setBulkDone(false); setVideoUrl(''); setVideoCaption(''); setVideoError('');
   };
 
-  // Upload a file directly to Cloudinary from the browser
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !openEventId || !token) return;    setUploadingFile(true);
-    setUploadProgress('Uploading to Cloudinary…');
-    setMediaError('');
-    try {
-      const result = await uploadToCloudinary(file, token ?? '', 'media');
-      setUploadUrl(result.url);
-      setUploadProgress('');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Upload failed';
-      setMediaError(msg);
-      setUploadProgress('');
-    } finally {
-      setUploadingFile(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+  const handleDeleteMedia = async (mediaId: string, eventId: string) => {
+    await fetch(`/api/gallery-events/${eventId}/media?mediaId=${mediaId}`, { method: 'DELETE', headers: authHeader });
+    setEventMedia(prev => ({ ...prev, [eventId]: (prev[eventId] ?? []).filter(m => m.id !== mediaId) }));
+  };
+
+  /* ─── Multi-file photo selection (up to 10) ──────────────── */
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).slice(0, MAX_FILES);
+    if (!files.length) return;
+    const items: QueueItem[] = files.map(f => ({
+      id: Math.random().toString(36).slice(2),
+      file: f,
+      preview: URL.createObjectURL(f),
+      status: 'pending',
+      progress: '',
+      cloudUrl: '',
+      error: '',
+    }));
+    setPhotoQueue(items);
+    setBulkDone(false);
+    if (photoInputRef.current) photoInputRef.current.value = '';
+  };
+
+  const removeFromQueue = (id: string) => {
+    setPhotoQueue(q => {
+      const item = q.find(x => x.id === id);
+      if (item?.preview) URL.revokeObjectURL(item.preview);
+      return q.filter(x => x.id !== id);
+    });
+  };
+
+  /* ─── Bulk upload to Cloudinary + save to DB ─────────────── */
+  const handleBulkUpload = async () => {
+    if (!openEventId || !token || photoQueue.length === 0) return;
+    setBulkUploading(true);
+    setBulkDone(false);
+
+    // Upload each file to Cloudinary (parallel, max 3 concurrent)
+    const uploadOne = async (item: QueueItem): Promise<QueueItem> => {
+      setPhotoQueue(q => q.map(x => x.id === item.id ? { ...x, status: 'uploading', progress: 'Uploading…' } : x));
+      try {
+        const result = await uploadToCloudinary(item.file, token, 'media');
+        setPhotoQueue(q => q.map(x => x.id === item.id ? { ...x, status: 'done', progress: 'Uploaded', cloudUrl: result.url } : x));
+        return { ...item, status: 'done', cloudUrl: result.url };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed';
+        setPhotoQueue(q => q.map(x => x.id === item.id ? { ...x, status: 'error', progress: '', error: msg } : x));
+        return { ...item, status: 'error', error: msg };
+      }
+    };
+
+    // Chunk into groups of 3 for parallel upload
+    const chunks: QueueItem[][] = [];
+    for (let i = 0; i < photoQueue.length; i += 3) chunks.push(photoQueue.slice(i, i + 3));
+
+    const allResults: QueueItem[] = [];
+    for (const chunk of chunks) {
+      const results = await Promise.all(chunk.map(uploadOne));
+      allResults.push(...results);
     }
-  };
 
-  const handleAddMedia = async () => {
-    if (!openEventId || !uploadUrl.trim()) { setMediaError('URL is required'); return; }
-    setUploadingMedia(true); setMediaError('');
-    try {
-      const res = await fetch(`/api/gallery-events/${openEventId}/media`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader },
-        body: JSON.stringify({
-          media_type: uploadType,
-          url: uploadUrl.trim(),
-          caption: uploadCaption || null,
-          thumbnail: uploadThumbnail || null,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setMediaError(data.error ?? 'Failed'); return; }
-      setEventMedia(prev => ({ ...prev, [openEventId]: [...(prev[openEventId] ?? []), data] }));
-      // Update counts in yearEvents
+    // Save all successfully uploaded photos to DB
+    const successful = allResults.filter(r => r.status === 'done' && r.cloudUrl);
+    for (const item of successful) {
+      try {
+        const res = await fetch(`/api/gallery-events/${openEventId}/media`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({ media_type: 'photo', url: item.cloudUrl, caption: null }),
+        });
+        if (res.ok) {
+          const saved = await res.json();
+          setEventMedia(prev => ({ ...prev, [openEventId]: [...(prev[openEventId] ?? []), saved] }));
+        }
+      } catch { /* non-fatal */ }
+    }
+
+    // Update photo count in year events
+    if (successful.length > 0) {
       setYearEvents(prev => {
         const updated = { ...prev };
         for (const yr of Object.keys(updated)) {
           updated[parseInt(yr)] = updated[parseInt(yr)].map(ev =>
             ev.id === openEventId
-              ? { ...ev, [uploadType === 'photo' ? 'photo_count' : 'video_count']: String(parseInt(ev[uploadType === 'photo' ? 'photo_count' : 'video_count']) + 1) }
+              ? { ...ev, photo_count: String(parseInt(ev.photo_count) + successful.length) }
               : ev
           );
         }
         return updated;
       });
-      setUploadUrl(''); setUploadCaption(''); setUploadThumbnail('');
-    } finally {
-      setUploadingMedia(false);
     }
+
+    setBulkUploading(false);
+    setBulkDone(true);
   };
 
-  const handleDeleteMedia = async (mediaId: string, eventId: string) => {
-    await fetch(`/api/gallery-events/${eventId}/media?mediaId=${mediaId}`, { method: 'DELETE', headers: authHeader });
-    setEventMedia(prev => ({
-      ...prev,
-      [eventId]: (prev[eventId] ?? []).filter(m => m.id !== mediaId),
-    }));
+  const clearQueue = () => {
+    photoQueue.forEach(item => { if (item.preview) URL.revokeObjectURL(item.preview); });
+    setPhotoQueue([]);
+    setBulkDone(false);
   };
 
+  /* ─── Add single video ──────────────────────────────────── */
+  const handleAddVideo = async () => {
+    if (!openEventId || !videoUrl.trim()) { setVideoError('Video URL is required'); return; }
+    setSavingVideo(true); setVideoError('');
+    try {
+      const res = await fetch(`/api/gallery-events/${openEventId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ media_type: 'video', url: videoUrl.trim(), caption: videoCaption || null, thumbnail: videoThumbnail || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setVideoError(data.error ?? 'Failed'); return; }
+      setEventMedia(prev => ({ ...prev, [openEventId]: [...(prev[openEventId] ?? []), data] }));
+      setYearEvents(prev => {
+        const updated = { ...prev };
+        for (const yr of Object.keys(updated)) {
+          updated[parseInt(yr)] = updated[parseInt(yr)].map(ev =>
+            ev.id === openEventId ? { ...ev, video_count: String(parseInt(ev.video_count) + 1) } : ev
+          );
+        }
+        return updated;
+      });
+      setVideoUrl(''); setVideoCaption(''); setVideoThumbnail('');
+    } finally { setSavingVideo(false); }
+  };
+
+  /* ─── Render ─────────────────────────────────────────────── */
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
@@ -221,7 +272,6 @@ export default function EventGalleryAdminPage() {
 
           return (
             <div key={year} className={`rounded-xl border transition-all ${isYearOpen ? 'border-primary/40 shadow-md' : 'border-border'}`}>
-              {/* Year header */}
               <button
                 onClick={() => toggleYear(year)}
                 className={`w-full flex items-center justify-between px-5 py-4 text-left rounded-xl transition-colors
@@ -245,34 +295,24 @@ export default function EventGalleryAdminPage() {
                       <Plus className="h-4 w-4 text-primary" /> Add Event for {year}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="Event name *"
+                      <input type="text" placeholder="Event name *"
                         value={newEventYear === year ? newEventName : ''}
                         onChange={e => { setNewEventYear(year); setNewEventName(e.target.value); setNewEventSlug(slugify(e.target.value)); }}
                         className="col-span-1 sm:col-span-2 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                       />
-                      <input
-                        type="text"
-                        placeholder="Slug (auto-generated)"
+                      <input type="text" placeholder="Slug (auto-generated)"
                         value={newEventYear === year ? newEventSlug : ''}
                         onChange={e => { setNewEventYear(year); setNewEventSlug(e.target.value); }}
                         className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                       />
-                      <input
-                        type="text"
-                        placeholder="Short description (optional)"
+                      <input type="text" placeholder="Short description (optional)"
                         value={newEventYear === year ? newEventDesc : ''}
                         onChange={e => { setNewEventYear(year); setNewEventDesc(e.target.value); }}
                         className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                       />
                     </div>
-                    {eventError && newEventYear === year && (
-                      <p className="text-xs text-destructive mt-2">{eventError}</p>
-                    )}
-                    <button
-                      onClick={() => { setNewEventYear(year); handleCreateEvent(); }}
-                      disabled={savingEvent}
+                    {eventError && newEventYear === year && <p className="text-xs text-destructive mt-2">{eventError}</p>}
+                    <button onClick={() => { setNewEventYear(year); handleCreateEvent(); }} disabled={savingEvent}
                       className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
                     >
                       {savingEvent && newEventYear === year ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -280,14 +320,11 @@ export default function EventGalleryAdminPage() {
                     </button>
                   </div>
 
-                  {/* Loading */}
                   {loadingYear === year && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                       <Loader2 className="h-4 w-4 animate-spin" /> Loading events…
                     </div>
                   )}
-
-                  {/* Events list */}
                   {events.length === 0 && loadingYear !== year && (
                     <p className="text-sm text-muted-foreground">No events yet for {year}.</p>
                   )}
@@ -310,10 +347,8 @@ export default function EventGalleryAdminPage() {
                               <span className="flex items-center gap-1"><Video className="h-3 w-3" />{ev.video_count}</span>
                             </div>
                           </button>
-                          <button
-                            onClick={() => handleDeleteEvent(ev.id, year)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          >
+                          <button onClick={() => handleDeleteEvent(ev.id, year)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                           <button onClick={() => toggleEvent(ev.id)} className="p-1.5 text-muted-foreground">
@@ -323,129 +358,172 @@ export default function EventGalleryAdminPage() {
 
                         {/* Media panel */}
                         {isEvOpen && (
-                          <div className="border-t border-border p-4 space-y-5">
+                          <div className="border-t border-border p-4 space-y-6">
                             {loadingMedia === ev.id && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Loader2 className="h-4 w-4 animate-spin" /> Loading media…
                               </div>
                             )}
 
-                            {/* Add media form */}
-                            <div className="rounded-lg border border-dashed border-border bg-background p-4">
-                              <h4 className="text-sm font-semibold mb-3">Add Media</h4>
-                              <div className="flex gap-2 mb-3">
-                                <button
-                                  onClick={() => setUploadType('photo')}
-                                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors
-                                    ${uploadType === 'photo' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'}`}
-                                >
-                                  <ImageIcon className="h-3.5 w-3.5" /> Photo
-                                </button>
-                                <button
-                                  onClick={() => setUploadType('video')}
-                                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors
-                                    ${uploadType === 'video' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'}`}
-                                >
-                                  <Video className="h-3.5 w-3.5" /> Video
-                                </button>
+                            {/* ── BULK PHOTO UPLOAD ── */}
+                            <div className="rounded-xl border border-dashed border-border bg-background p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-bold flex items-center gap-2">
+                                  <ImageIcon className="h-4 w-4 text-primary" /> Add Photos
+                                </h4>
+                                <span className="text-xs text-muted-foreground">Up to {MAX_FILES} at once</span>
                               </div>
 
-                              <div className="space-y-2">
-                                {/* URL input + file upload */}
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder={uploadType === 'photo' ? 'Cloudinary URL or upload a file' : 'YouTube / video URL or upload a file'}
-                                    value={uploadUrl}
-                                    onChange={e => setUploadUrl(e.target.value)}
-                                    className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                  />
-                                  <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept={uploadType === 'photo' ? 'image/*' : 'video/*,image/*'}
-                                    className="hidden"
-                                    onChange={handleFileUpload}
-                                  />
-                                  <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={uploadingFile}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-2 text-xs font-medium hover:bg-muted/80 disabled:opacity-50 shrink-0"
-                                  >
-                                    {uploadingFile
-                                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                      : <Upload className="h-3.5 w-3.5" />}
-                                    Upload
-                                  </button>
-                                </div>
-                                {uploadProgress && (
-                                  <p className="text-xs text-primary flex items-center gap-1.5">
-                                    <Loader2 className="h-3 w-3 animate-spin" /> {uploadProgress}
-                                  </p>
-                                )}
-                                {/* Preview uploaded image */}
-                                {uploadUrl && uploadType === 'photo' && uploadUrl.includes('cloudinary.com') && (
-                                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border bg-muted">
-                                    <img
-                                      src={cloudinaryOptimized(uploadUrl, 'w_200,h_200,c_fill,f_auto,q_auto')}
-                                      alt="Preview"
-                                      className="h-full w-full object-cover"
-                                    />
+                              {/* Drop zone / select button */}
+                              {photoQueue.length === 0 ? (
+                                <button
+                                  onClick={() => photoInputRef.current?.click()}
+                                  className="w-full flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary/40 bg-muted/30 hover:bg-primary/5 py-8 transition-all group"
+                                >
+                                  <Upload className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                                  <span className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">
+                                    Click to select photos
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">JPG, PNG, WebP — max 10 files</span>
+                                </button>
+                              ) : (
+                                <div className="space-y-3">
+                                  {/* Preview grid */}
+                                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                                    {photoQueue.map(item => (
+                                      <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-muted group">
+                                        <img src={item.preview} alt="" className="h-full w-full object-cover" />
+
+                                        {/* Status overlay */}
+                                        {item.status === 'uploading' && (
+                                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                            <Loader2 className="h-5 w-5 text-white animate-spin" />
+                                          </div>
+                                        )}
+                                        {item.status === 'done' && (
+                                          <div className="absolute inset-0 bg-green-500/30 flex items-center justify-center">
+                                            <CheckCircle2 className="h-5 w-5 text-green-400" />
+                                          </div>
+                                        )}
+                                        {item.status === 'error' && (
+                                          <div className="absolute inset-0 bg-destructive/30 flex items-center justify-center">
+                                            <AlertCircle className="h-5 w-5 text-destructive" />
+                                          </div>
+                                        )}
+
+                                        {/* Remove button — only before uploading */}
+                                        {item.status === 'pending' && !bulkUploading && (
+                                          <button
+                                            onClick={() => removeFromQueue(item.id)}
+                                            className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {/* Add more button */}
+                                    {photoQueue.length < MAX_FILES && !bulkUploading && !bulkDone && (
+                                      <button
+                                        onClick={() => photoInputRef.current?.click()}
+                                        className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/40 bg-muted/30 flex items-center justify-center transition-all hover:bg-primary/5"
+                                      >
+                                        <Plus className="h-5 w-5 text-muted-foreground" />
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Status summary */}
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>
+                                      {photoQueue.filter(x => x.status === 'done').length} done ·{' '}
+                                      {photoQueue.filter(x => x.status === 'uploading').length} uploading ·{' '}
+                                      {photoQueue.filter(x => x.status === 'error').length} failed ·{' '}
+                                      {photoQueue.filter(x => x.status === 'pending').length} pending
+                                    </span>
+                                    <span>{photoQueue.length}/{MAX_FILES}</span>
+                                  </div>
+
+                                  {/* Action buttons */}
+                                  <div className="flex gap-2">
+                                    {!bulkDone ? (
+                                      <button
+                                        onClick={handleBulkUpload}
+                                        disabled={bulkUploading || photoQueue.every(x => x.status === 'done')}
+                                        className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                                      >
+                                        {bulkUploading
+                                          ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading {photoQueue.filter(x => x.status === 'uploading').length} files…</>
+                                          : <><Upload className="h-4 w-4" /> Upload {photoQueue.length} Photo{photoQueue.length !== 1 ? 's' : ''}</>}
+                                      </button>
+                                    ) : (
+                                      <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-4 py-2.5 text-sm font-semibold">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        {photoQueue.filter(x => x.status === 'done').length} photos uploaded!
+                                      </div>
+                                    )}
                                     <button
-                                      onClick={() => setUploadUrl('')}
-                                      className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-destructive"
+                                      onClick={clearQueue}
+                                      disabled={bulkUploading}
+                                      className="rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
                                     >
-                                      <X className="h-3 w-3" />
+                                      Clear
                                     </button>
                                   </div>
-                                )}
-                                <input
-                                  type="text"
-                                  placeholder="Caption (optional)"
-                                  value={uploadCaption}
-                                  onChange={e => setUploadCaption(e.target.value)}
-                                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                </div>
+                              )}
+
+                              {/* Hidden file input — multiple */}
+                              <input
+                                ref={photoInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={handlePhotoSelect}
+                              />
+                            </div>
+
+                            {/* ── ADD VIDEO (single) ── */}
+                            <div className="rounded-xl border border-dashed border-border bg-background p-4 space-y-3">
+                              <h4 className="text-sm font-bold flex items-center gap-2">
+                                <Video className="h-4 w-4 text-primary" /> Add Video
+                              </h4>
+                              <input type="text" placeholder="YouTube / video URL *"
+                                value={videoUrl} onChange={e => setVideoUrl(e.target.value)}
+                                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              />
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" placeholder="Caption (optional)"
+                                  value={videoCaption} onChange={e => setVideoCaption(e.target.value)}
+                                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 />
-                                {uploadType === 'video' && (
-                                  <input
-                                    type="text"
-                                    placeholder="Thumbnail URL (optional)"
-                                    value={uploadThumbnail}
-                                    onChange={e => setUploadThumbnail(e.target.value)}
-                                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                  />
-                                )}
+                                <input type="text" placeholder="Thumbnail URL (optional)"
+                                  value={videoThumbnail} onChange={e => setVideoThumbnail(e.target.value)}
+                                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
                               </div>
-                              {mediaError && <p className="text-xs text-destructive mt-2">{mediaError}</p>}
-                              <button
-                                onClick={handleAddMedia}
-                                disabled={uploadingMedia}
-                                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                              {videoError && <p className="text-xs text-destructive">{videoError}</p>}
+                              <button onClick={handleAddVideo} disabled={savingVideo}
+                                className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
                               >
-                                {uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                Add {uploadType === 'photo' ? 'Photo' : 'Video'}
+                                {savingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                                Add Video
                               </button>
                             </div>
 
-                            {/* Photo grid */}
+                            {/* ── Existing photos ── */}
                             {evPhotos.length > 0 && (
                               <div>
                                 <h5 className="text-xs font-semibold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
                                   <ImageIcon className="h-3.5 w-3.5" /> Photos ({evPhotos.length})
                                 </h5>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                                   {evPhotos.map(p => (
                                     <div key={p.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                                      <img
-                                        src={cloudinaryOptimized(p.url, 'w_200,h_200,c_fill,f_auto,q_auto')}
-                                        alt={p.caption ?? ''}
-                                        className="h-full w-full object-cover"
-                                        loading="lazy"
-                                      />
-                                      <button
-                                        onClick={() => handleDeleteMedia(p.id, ev.id)}
-                                        className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                                      >
+                                      <img src={cloudinaryOptimized(p.url, 'w_200,h_200,c_fill,f_auto,q_auto')} alt={p.caption ?? ''} className="h-full w-full object-cover" loading="lazy" />
+                                      <button onClick={() => handleDeleteMedia(p.id, ev.id)}
+                                        className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive">
                                         <X className="h-3.5 w-3.5" />
                                       </button>
                                     </div>
@@ -454,7 +532,7 @@ export default function EventGalleryAdminPage() {
                               </div>
                             )}
 
-                            {/* Video list */}
+                            {/* ── Existing videos ── */}
                             {evVideos.length > 0 && (
                               <div>
                                 <h5 className="text-xs font-semibold uppercase text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -465,16 +543,13 @@ export default function EventGalleryAdminPage() {
                                     <div key={v.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
                                       {v.thumbnail
                                         ? <img src={v.thumbnail} alt="" className="h-10 w-16 rounded object-cover shrink-0" />
-                                        : <div className="h-10 w-16 rounded bg-muted flex items-center justify-center shrink-0"><Video className="h-4 w-4 text-muted-foreground" /></div>
-                                      }
+                                        : <div className="h-10 w-16 rounded bg-muted flex items-center justify-center shrink-0"><Video className="h-4 w-4 text-muted-foreground" /></div>}
                                       <div className="flex-1 min-w-0">
                                         <p className="text-xs font-medium truncate">{v.caption || v.url}</p>
                                         <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate block">{v.url}</a>
                                       </div>
-                                      <button
-                                        onClick={() => handleDeleteMedia(v.id, ev.id)}
-                                        className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                      >
+                                      <button onClick={() => handleDeleteMedia(v.id, ev.id)}
+                                        className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </button>
                                     </div>
