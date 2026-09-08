@@ -217,7 +217,7 @@ export default function EventsPage() {
                   return (
                     <div
                       key={year}
-                      className={`rounded-xl border transition-all duration-200 overflow-hidden
+                      className={`rounded-xl border transition-all duration-200
                         ${isOpen ? 'border-primary/40 shadow-md' : 'border-border hover:border-primary/20'}`}
                     >
                       <button
@@ -251,42 +251,46 @@ export default function EventsPage() {
                       {isOpen && (
                         <div className="border-t border-border bg-muted/20 px-4 sm:px-5 py-4">
                           {isLoading ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {[1,2].map(i => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {[1,2,3,4,5,6].map(i => <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />)}
                             </div>
                           ) : events.length === 0 ? (
                             <p className="text-sm text-muted-foreground py-2">
                               {lang === 'hi' ? 'इस वर्ष के लिए कोई कार्यक्रम नहीं।' : 'No events for this year yet.'}
                             </p>
                           ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {events.map((ev, i) => (
-                                <Link
-                                  key={ev.id}
-                                  href={`/events/${ev.slug}`}
-                                  className="group flex gap-3 rounded-xl border border-border bg-card p-3 sm:p-4 hover:border-primary/40 hover:shadow-md transition-all animate-slide-up"
-                                  style={{ animationDelay: `${i * 50}ms` }}
-                                >
-                                  {ev.cover_url ? (
-                                    <div className="h-16 w-20 shrink-0 rounded-lg overflow-hidden bg-muted">
-                                      <img src={ev.cover_url} alt={ev.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                            <>
+                              <p className="text-xs text-muted-foreground mb-3 font-medium">
+                                {events.length} {lang === 'hi' ? 'कार्यक्रम' : 'events'}
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {events.map((ev, i) => (
+                                  <Link
+                                    key={ev.id}
+                                    href={`/events/${ev.slug}`}
+                                    className="group flex gap-3 rounded-xl border border-border bg-card p-3 hover:border-primary/40 hover:shadow-md transition-all"
+                                  >
+                                    {ev.cover_url ? (
+                                      <div className="h-14 w-16 shrink-0 rounded-lg overflow-hidden bg-muted">
+                                        <img src={ev.cover_url} alt={ev.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                                      </div>
+                                    ) : (
+                                      <div className="h-14 w-16 shrink-0 rounded-lg bg-muted flex items-center justify-center">
+                                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-1">{ev.name}</h3>
+                                      {ev.description && <p className="text-xs text-muted-foreground line-clamp-1 mb-1">{ev.description}</p>}
+                                      <div className="flex gap-2 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{ev.photo_count}</span>
+                                        <span className="flex items-center gap-1"><Video className="h-3 w-3" />{ev.video_count}</span>
+                                      </div>
                                     </div>
-                                  ) : (
-                                    <div className="h-16 w-20 shrink-0 rounded-lg bg-muted flex items-center justify-center">
-                                      <Calendar className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-1">{ev.name}</h3>
-                                    {ev.description && <p className="text-xs text-muted-foreground line-clamp-1 mb-1">{ev.description}</p>}
-                                    <div className="flex gap-2 text-xs text-muted-foreground">
-                                      <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{ev.photo_count}</span>
-                                      <span className="flex items-center gap-1"><Video className="h-3 w-3" />{ev.video_count}</span>
-                                    </div>
-                                  </div>
-                                </Link>
-                              ))}
-                            </div>
+                                  </Link>
+                                ))}
+                              </div>
+                            </>
                           )}
                         </div>
                       )}
