@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     // Return years that have at least one event, with counts
     const years = await query(
       `SELECT ge.year,
-              COUNT(ge.id)                                        AS event_count,
+              COUNT(DISTINCT ge.id)                               AS event_count,
               COUNT(gm.id) FILTER (WHERE gm.media_type = 'photo') AS photo_count,
               COUNT(gm.id) FILTER (WHERE gm.media_type = 'video') AS video_count
        FROM gallery_events ge
