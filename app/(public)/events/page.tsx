@@ -21,8 +21,10 @@ interface GalleryEvent {
   id: string;
   year: number;
   name: string;
+  name_en: string | null;
   slug: string;
   description: string | null;
+  description_en: string | null;
   cover_url: string | null;
   photo_count: string;
   video_count: string;
@@ -280,8 +282,14 @@ export default function EventsPage() {
                                       </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                      <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-1">{ev.name}</h3>
-                                      {ev.description && <p className="text-xs text-muted-foreground line-clamp-1 mb-1">{ev.description}</p>}
+                                      <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-1">
+                                        {(lang === 'en' && ev.name_en) ? ev.name_en : ev.name}
+                                      </h3>
+                                      {(ev.description || ev.description_en) && (
+                                        <p className="text-xs text-muted-foreground line-clamp-1 mb-1">
+                                          {(lang === 'en' && ev.description_en) ? ev.description_en : ev.description}
+                                        </p>
+                                      )}
                                       <div className="flex gap-2 text-xs text-muted-foreground">
                                         <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{ev.photo_count}</span>
                                         <span className="flex items-center gap-1"><Video className="h-3 w-3" />{ev.video_count}</span>

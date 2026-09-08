@@ -54,10 +54,26 @@ export async function POST(req: NextRequest) {
     if (!year || !name || !slug) return err('year, name and slug are required');
     if (year < 2009 || year > 2028) return err('year must be between 2009 and 2028');
 
+    // Auto-translate Hindi name and description to English
+    let name_en: string | null = body.name_en ?? null;
+    let description_en: string | null = body.description_en ?? null;
+
+    try {
+      const { translateBatch, isHindi } = await import('@/lib/translate');
+      if (isHindi(name) || isHindi(description)) {
+        const [tName, tDesc] = await translateBatch([
+          !name_en ? name : null,
+          !description_en && description ? description : null,
+        ]);
+        if (!name_en && tName) name_en = tName;
+        if (!description_en && tDesc) description_en = tDesc;
+      }
+    } catch { /* translation is best-effort — don't fail the request */ }
+
     const event = await queryOne(
-      `INSERT INTO gallery_events (year, name, slug, description, cover_url, sort_order, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [year, name, slug, description || null, cover_url || null, sort_order ?? 0, user.id]
+      `INSERT INTO gallery_events (year, name, slug, description, cover_url, sort_order, created_by, name_en, description_en)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [year, name, slug, description || null, cover_url || null, sort_order ?? 0, user.id, name_en, description_en]
     );
 
     await writeAuditLog(user.id, 'CREATE_GALLERY_EVENT', 'gallery_events', (event as { id: string }).id, { name, year });

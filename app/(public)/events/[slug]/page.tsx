@@ -15,6 +15,7 @@ import type { Event } from '@/lib/types';
 interface GalleryEvent {
   id: string; year: number; name: string; slug: string;
   description: string | null; cover_url: string | null;
+  name_en: string | null; description_en: string | null;
 }
 interface GalleryMedia {
   id: string; event_id: string; media_type: 'photo' | 'video';
@@ -286,13 +287,15 @@ export default function EventDetailPage() {
   ═══════════════════════════════════════════════════════════ */
   if (pageType === 'gallery' && galleryEvent) {
     const ev = galleryEvent;
+    const evName = (lang === 'en' && ev.name_en) ? ev.name_en : ev.name;
+    const evDesc = (lang === 'en' && ev.description_en) ? ev.description_en : ev.description;
     return (
       <div className="flex flex-col">
         {/* Hero */}
         <section className={`relative overflow-hidden ${ev.cover_url ? 'h-52 sm:h-72' : 'py-14 sm:py-20 bg-secondary/5'}`}>
           {ev.cover_url && (
             <>
-              <img src={ev.cover_url} alt={ev.name} className="absolute inset-0 h-full w-full object-cover" />
+              <img src={ev.cover_url} alt={evName} className="absolute inset-0 h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             </>
           )}
@@ -304,11 +307,11 @@ export default function EventDetailPage() {
               {ev.year}
             </span>
             <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold text-balance ${ev.cover_url ? 'text-white' : ''}`}>
-              {ev.name}
+              {evName}
             </h1>
-            {ev.description && (
+            {evDesc && (
               <p className={`mt-2 text-sm sm:text-base max-w-2xl leading-relaxed ${ev.cover_url ? 'text-white/80' : 'text-muted-foreground'}`}>
-                {ev.description}
+                {evDesc}
               </p>
             )}
             <div className={`flex gap-4 mt-3 text-sm ${ev.cover_url ? 'text-white/70' : 'text-muted-foreground'}`}>
