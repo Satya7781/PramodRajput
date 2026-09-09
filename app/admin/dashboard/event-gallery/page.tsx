@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Plus, ChevronDown, ChevronUp, Trash2, Upload,
-  ImageIcon, Video, X, Loader2, FolderOpen, CheckCircle2, AlertCircle
+  ImageIcon, Video, X, Loader2, FolderOpen, CheckCircle2, AlertCircle, Pencil, Save
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getAuthToken } from '@/lib/api-client';
@@ -60,6 +60,14 @@ export default function EventGalleryAdminPage() {
   const [eventMedia, setEventMedia]     = useState<Record<string, GalleryMedia[]>>({});
   const [loadingMedia, setLoadingMedia] = useState<string | null>(null);
 
+  /* ── Edit event ── */
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editName, setEditName]             = useState('');
+  const [editSlug, setEditSlug]             = useState('');
+  const [editDesc, setEditDesc]             = useState('');
+  const [savingEdit, setSavingEdit]         = useState(false);
+  const [editError, setEditError]           = useState('');
+
   /* ── Bulk photo queue ── */
   const [photoQueue, setPhotoQueue]     = useState<QueueItem[]>([]);
   const [bulkUploading, setBulkUploading] = useState(false);
@@ -107,8 +115,48 @@ export default function EventGalleryAdminPage() {
     } finally { setSavingEvent(false); }
   };
 
-  const handleDeleteEvent = async (eventId: string, year: number) => {
-    if (!confirm('Delete this event and all its media?')) return;
+  const startEditEvent = (ev: GalleryEvent) => {
+    setEditingEventId(ev.id);
+    setEditName(ev.name);
+    setEditSlug(ev.slug);
+    setEditDesc(ev.description ?? '');
+    setEditError('');
+  };
+
+  const cancelEdit = () => { setEditingEventId(null); setEditError(''); };
+
+  const handleSaveEdit = async (ev: GalleryEvent, year: number) => {
+    if (!editName.trim()) { setEditError('Name is required'); return; }
+    setSavingEdit(true); setEditError('');
+    try {
+      const res = await fetch(`/api/gallery-events/${ev.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({
+          year,
+          name:        editName.trim(),
+          slug:        editSlug.trim() || slugify(editName),
+          description: editDesc.trim() || null,
+          cover_url:   ev.cover_url,
+          sort_order:  0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setEditError(data.error ?? 'Failed to save'); return; }
+      // Update local state
+      setYearEvents(prev => ({
+        ...prev,
+        [year]: (prev[year] ?? []).map(e =>
+          e.id === ev.id
+            ? { ...e, name: data.name, slug: data.slug, description: data.description }
+            : e
+        ),
+      }));
+      setEditingEventId(null);
+    } finally { setSavingEdit(false); }
+  };
+
+  const handleDeleteEvent = async (eventId: string, year: number) => {    if (!confirm('Delete this event and all its media?')) return;
     await fetch(`/api/gallery-events/${eventId}`, { method: 'DELETE', headers: authHeader });
     setYearEvents(prev => ({ ...prev, [year]: (prev[year] ?? []).filter(e => e.id !== eventId) }));
     if (openEventId === eventId) setOpenEventId(null);
@@ -337,27 +385,89 @@ export default function EventGalleryAdminPage() {
 
                     return (
                       <div key={ev.id} className={`rounded-xl border transition-all ${isEvOpen ? 'border-primary/30' : 'border-border'}`}>
-                        {/* Event header */}
-                        <div className={`flex items-center gap-3 px-4 py-3 ${isEvOpen ? 'bg-primary/5 rounded-t-xl' : 'bg-card rounded-xl hover:bg-muted/40'} transition-colors`}>
-                          <button onClick={() => toggleEvent(ev.id)} className="flex-1 flex items-center gap-3 text-left min-w-0">
-                            <FolderOpen className={`h-4 w-4 shrink-0 ${isEvOpen ? 'text-primary' : 'text-muted-foreground'}`} />
-                            <span className="font-medium text-sm truncate">{ev.name}</span>
-                            <div className="flex gap-2 text-xs text-muted-foreground ml-auto shrink-0">
-                              <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{ev.photo_count}</span>
-                              <span className="flex items-center gap-1"><Video className="h-3 w-3" />{ev.video_count}</span>
+                        {/* Event header / edit form */}
+                        {editingEventId === ev.id ? (
+                          /* ── Inline edit form ── */
+                          <div className="p-4 bg-primary/5 rounded-xl border border-primary/30 space-y-3">
+                            <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
+                              <Pencil className="h-3.5 w-3.5" /> Edit Event
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <input
+                                type="text"
+                                placeholder="Event name *"
+                                value={editName}
+                                onChange={e => { setEditName(e.target.value); setEditSlug(slugify(e.target.value)); }}
+                                className="col-span-1 sm:col-span-2 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Slug"
+                                value={editSlug}
+                                onChange={e => setEditSlug(e.target.value)}
+                                className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Short description (optional)"
+                                value={editDesc}
+                                onChange={e => setEditDesc(e.target.value)}
+                                className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              />
                             </div>
-                          </button>
-                          <button onClick={() => handleDeleteEvent(ev.id, year)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={() => toggleEvent(ev.id)} className="p-1.5 text-muted-foreground">
-                            {isEvOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </button>
-                        </div>
+                            {editError && <p className="text-xs text-destructive">{editError}</p>}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleSaveEdit(ev, year)}
+                                disabled={savingEdit}
+                                className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                              >
+                                {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* ── Normal event header ── */
+                          <div className={`flex items-center gap-3 px-4 py-3 ${isEvOpen ? 'bg-primary/5 rounded-t-xl' : 'bg-card rounded-xl hover:bg-muted/40'} transition-colors`}>
+                            <button onClick={() => toggleEvent(ev.id)} className="flex-1 flex items-center gap-3 text-left min-w-0">
+                              <FolderOpen className={`h-4 w-4 shrink-0 ${isEvOpen ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <div className="flex-1 min-w-0">
+                                <span className="font-medium text-sm truncate block">{ev.name}</span>
+                                {ev.description && <span className="text-xs text-muted-foreground truncate block">{ev.description}</span>}
+                              </div>
+                              <div className="flex gap-2 text-xs text-muted-foreground shrink-0">
+                                <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{ev.photo_count}</span>
+                                <span className="flex items-center gap-1"><Video className="h-3 w-3" />{ev.video_count}</span>
+                              </div>
+                            </button>
+                            <button
+                              onClick={() => startEditEvent(ev)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                              title="Edit event"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(ev.id, year)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => toggleEvent(ev.id)} className="p-1.5 text-muted-foreground">
+                              {isEvOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        )}
 
-                        {/* Media panel */}
-                        {isEvOpen && (
+                        {/* Media panel — only when not editing */}
+                        {isEvOpen && editingEventId !== ev.id && (
                           <div className="border-t border-border p-4 space-y-6">
                             {loadingMedia === ev.id && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">

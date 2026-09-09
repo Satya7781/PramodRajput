@@ -48,12 +48,30 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { id } = params;
     const body = await req.json();
     const { year, name, slug, description, cover_url, sort_order } = body;
+    let { name_en, description_en } = body as { name_en?: string; description_en?: string };
+
+    // Auto-translate if not provided
+    if (!name_en || !description_en) {
+      try {
+        const { translateBatch, isHindi } = await import('@/lib/translate');
+        if (isHindi(name) || isHindi(description)) {
+          const [tName, tDesc] = await translateBatch([
+            !name_en ? name : null,
+            !description_en && description ? description : null,
+          ]);
+          if (!name_en && tName) name_en = tName;
+          if (!description_en && tDesc) description_en = tDesc;
+        }
+      } catch { /* best-effort */ }
+    }
 
     const event = await queryOne(
       `UPDATE gallery_events
-       SET year=$1, name=$2, slug=$3, description=$4, cover_url=$5, sort_order=$6, updated_at=now()
-       WHERE id=$7 RETURNING *`,
-      [year, name, slug, description || null, cover_url || null, sort_order ?? 0, id]
+       SET year=$1, name=$2, slug=$3, description=$4, cover_url=$5, sort_order=$6,
+           name_en=$7, description_en=$8, updated_at=now()
+       WHERE id=$9 RETURNING *`,
+      [year, name, slug, description || null, cover_url || null, sort_order ?? 0,
+       name_en || null, description_en || null, id]
     );
     if (!event) return err('Not found', 404);
 
