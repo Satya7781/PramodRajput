@@ -17,6 +17,7 @@ import {
 import { formatDateTime, slugify } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { useAutoTranslate } from '@/lib/use-translate';
+import { useLanguage } from '@/lib/i18n';
 
 type NewsStatus = 'draft' | 'published' | 'archived';
 type MediaType  = 'photo' | 'video' | 'link';
@@ -66,6 +67,7 @@ export default function NewsAdminPage() {
   const fileInputRef              = useRef<HTMLInputElement>(null);
   const bulkInputRef              = useRef<HTMLInputElement>(null);
   const { autoTranslate, translating } = useAutoTranslate();
+  const { lang } = useLanguage();
   const token = getAuthToken();
 
   /* ── Media panel per article ── */
@@ -394,8 +396,10 @@ export default function NewsAdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {articles.map(a => (
-                  <>
+                {articles.map(a => {
+                  const displayTitle = (lang === 'en' && (a as any).title_en) ? (a as any).title_en : a.title;
+                  return (
+                    <>
                     <tr key={a.id} className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -403,7 +407,7 @@ export default function NewsAdminPage() {
                             ? <img src={a.featured_image_url} alt="" className="h-8 w-8 rounded object-cover shrink-0" />
                             : <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0"><ImageIcon className="h-4 w-4 text-muted-foreground" /></div>}
                           <div>
-                            <p className="text-sm font-medium truncate max-w-xs">{a.title}</p>
+                            <p className="text-sm font-medium truncate max-w-xs">{displayTitle}</p>
                             <p className="text-xs text-muted-foreground">/news/{a.slug}</p>
                           </div>
                         </div>
@@ -556,8 +560,8 @@ export default function NewsAdminPage() {
                       </tr>
                     )}
                   </>
-                ))}
-              </tbody>
+                  );
+                })}              </tbody>
             </table>
           </div>
         </div>
