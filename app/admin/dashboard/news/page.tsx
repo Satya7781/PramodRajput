@@ -157,10 +157,10 @@ export default function NewsAdminPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Category</Label>
-                <Select value={form.category_id} onValueChange={(v) => set('category_id', v)}>
+                <Select value={form.category_id || 'none'} onValueChange={(v) => set('category_id', v === 'none' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Category</SelectItem>
+                    <SelectItem value="none">No Category</SelectItem>
                     {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
