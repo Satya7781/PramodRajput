@@ -2,7 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { events as eventsApi, uploadFile } from '@/lib/api-client';
+import { events as eventsApi, getAuthToken } from '@/lib/api-client';
+import { uploadToCloudinary } from '@/lib/upload';
 import type { Event } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,10 +56,12 @@ export function EventForm({ event }: EventFormProps) {
   };
 
   const handleBannerUpload = async (file: File) => {
+    const token = getAuthToken();
+    if (!token) { toast.error('Not authenticated.'); return; }
     setUploadingBanner(true);
     try {
-      const url = await uploadFile(file);
-      setBannerUrl(url);
+      const result = await uploadToCloudinary(file, token, 'events');
+      setBannerUrl(result.url);
       toast.success('Banner uploaded successfully.');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Upload failed.'); }
     finally { setUploadingBanner(false); }

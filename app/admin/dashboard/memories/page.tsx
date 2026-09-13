@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { memories as memoriesApi, uploadFile } from '@/lib/api-client';
+import { memories as memoriesApi, getAuthToken } from '@/lib/api-client';
+import { uploadToCloudinary } from '@/lib/upload';
 import type { EventMemory, MemoryPhoto, MemoryVideo } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,7 @@ export default function MemoriesAdminPage() {
   const [form, setForm]             = useState<MemoryForm>(EMPTY);
   const [saving, setSaving]         = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const token = getAuthToken();
 
   // Expanded media panel
   const [expanded, setExpanded]     = useState<string | null>(null);
@@ -119,10 +121,11 @@ export default function MemoriesAdminPage() {
 
   // ─── Cover image upload ──────────────────────────────────────────────────────
   const handleCoverUpload = async (file: File) => {
+    if (!token) { toast.error('Not authenticated.'); return; }
     setUploadingCover(true);
     try {
-      const url = await uploadFile(file);
-      set('cover_image_url', url);
+      const result = await uploadToCloudinary(file, token, 'memories');
+      set('cover_image_url', result.url);
       toast.success('Cover image uploaded.');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Upload failed.'); }
     finally { setUploadingCover(false); }
@@ -198,10 +201,11 @@ export default function MemoriesAdminPage() {
 
   // ─── Photo upload ─────────────────────────────────────────────────────────────
   const handlePhotoUpload = async (memoryId: string, file: File) => {
+    if (!token) { toast.error('Not authenticated.'); return; }
     setUploadingPhoto(true);
     try {
-      const url = await uploadFile(file);
-      await memoriesApi.addPhoto(memoryId, { image_url: url, caption: photoCaption.trim() || undefined });
+      const result = await uploadToCloudinary(file, token, 'memories');
+      await memoriesApi.addPhoto(memoryId, { image_url: result.url, caption: photoCaption.trim() || undefined });
       toast.success('Photo added.');
       setPhotoCaption('');
       await refreshMedia(memoryId);

@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { news as newsApi, uploadFile } from '@/lib/api-client';
+import { news as newsApi } from '@/lib/api-client';
+import { getAuthToken } from '@/lib/api-client';
+import { uploadToCloudinary } from '@/lib/upload';
 import type { News, NewsCategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +45,7 @@ export default function NewsAdminPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { autoTranslate, translating } = useAutoTranslate();
+  const token = getAuthToken();
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -75,10 +78,11 @@ export default function NewsAdminPage() {
   };
 
   const handleImageUpload = async (file: File) => {
+    if (!token) { toast.error('Not authenticated.'); return; }
     setUploading(true);
     try {
-      const url = await uploadFile(file);
-      set('featured_image_url', url);
+      const result = await uploadToCloudinary(file, token, 'news');
+      set('featured_image_url', result.url);
       toast.success('Image uploaded successfully.');
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Upload failed.'); }
     finally { setUploading(false); }
