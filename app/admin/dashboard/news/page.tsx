@@ -17,7 +17,6 @@ import {
 import { formatDateTime, slugify } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { useAutoTranslate } from '@/lib/use-translate';
-import { useLanguage } from '@/lib/i18n';
 
 type NewsStatus = 'draft' | 'published' | 'archived';
 type MediaType  = 'photo' | 'video' | 'link';
@@ -67,7 +66,6 @@ export default function NewsAdminPage() {
   const fileInputRef              = useRef<HTMLInputElement>(null);
   const bulkInputRef              = useRef<HTMLInputElement>(null);
   const { autoTranslate, translating } = useAutoTranslate();
-  const { lang } = useLanguage();
   const token = getAuthToken();
 
   /* ── Media panel per article ── */
@@ -400,7 +398,7 @@ export default function NewsAdminPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {articles.map(a => {
-                  const displayTitle = (lang === 'en' && (a as any).title_en) ? (a as any).title_en : a.title;
+                  const displayTitle = (a as any).title_en ? `${a.title} / ${(a as any).title_en}` : a.title;
                   return (
                     <>
                     <tr key={a.id} className="hover:bg-muted/30 transition-colors">
