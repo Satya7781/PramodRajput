@@ -123,7 +123,7 @@ export default function CertificatesPage() {
           </SelectContent>
         </Select>
         {templates.length > 0 && (
-          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+          <Select value={selectedTemplate || 'none'} onValueChange={(v) => setSelectedTemplate(v === 'none' ? '' : v)}>
             <SelectTrigger className="w-52"><SelectValue placeholder="Select Template" /></SelectTrigger>
             <SelectContent>{templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
           </Select>

@@ -221,8 +221,7 @@ export default function HomePage() {
                   <div className="aspect-[16/10] overflow-hidden bg-muted relative">
                     {event.banner_url
                       ? <img src={event.banner_url} alt={event.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                      : <div className="h-full w-full flex items-center justify-center"><Calendar className="h-10 w-10 text-muted-foreground/40" /></div>}
-                    {event.status === 'registration_open' && (
+                      : <div className="h-full w-full flex items-center justify-center"><Calendar className="h-10 w-10 text-muted-foreground/40" /></div>}                    {event.status === 'registration_open' && (
                       <span className="absolute top-3 left-3 rounded-full bg-green-500 text-white px-2.5 py-0.5 text-xs font-semibold shadow-md">
                         {t('home', 'registrationOpen')}
                       </span>
