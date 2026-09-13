@@ -239,7 +239,10 @@ export default function NewsAdminPage() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
           body: JSON.stringify({ media_type: 'photo', url: item.cloudUrl }),
         });
-        if (res.ok) setArticleMedia(prev => [...prev, await res.json()]);
+        if (res.ok) {
+          const saved = await res.json();
+          setArticleMedia(prev => [...prev, saved]);
+        }
       } catch {}
     }
 

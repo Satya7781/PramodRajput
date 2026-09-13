@@ -42,7 +42,9 @@ export default function NewsPage() {
 
   const filtered = articles.filter(a => {
     const q = search.toLowerCase();
-    const matchSearch = !q || a.title.toLowerCase().includes(q) || (a.excerpt ?? '').toLowerCase().includes(q);
+    const title   = (lang === 'en' && (a as any).title_en)   ? (a as any).title_en   : a.title;
+    const excerpt = (lang === 'en' && (a as any).excerpt_en) ? (a as any).excerpt_en : (a.excerpt ?? '');
+    const matchSearch = !q || title.toLowerCase().includes(q) || excerpt.toLowerCase().includes(q);
     const matchCat = activeCategory === 'all' || a.news_categories?.slug === activeCategory;
     return matchSearch && matchCat;
   });
@@ -166,9 +168,11 @@ export default function NewsPage() {
                       </span>
                     )}
                     <h2 className="text-xl sm:text-2xl font-black group-hover:text-primary transition-colors leading-snug line-clamp-3">
-                      {featured.title}
+                      {(lang === 'en' && (featured as any).title_en) ? (featured as any).title_en : featured.title}
                     </h2>
-                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{featured.excerpt}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                      {(lang === 'en' && (featured as any).excerpt_en) ? (featured as any).excerpt_en : featured.excerpt}
+                    </p>
                     {featured.published_at && (
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                         <Calendar className="h-3.5 w-3.5" />{formatDate(featured.published_at, lang)}
@@ -184,34 +188,38 @@ export default function NewsPage() {
               {/* Grid */}
               {rest.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                  {rest.map((article, i) => (
-                    <Link
-                      key={article.id}
-                      href={`/news/${article.slug}`}
-                      className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
-                      style={{ animationDelay: `${i * 60}ms` }}
-                    >
-                      <div className="aspect-[16/10] overflow-hidden bg-muted">
-                        {article.featured_image_url
-                          ? <img src={article.featured_image_url} alt={article.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                          : <div className="h-full w-full flex items-center justify-center"><Newspaper className="h-10 w-10 text-muted-foreground/30" /></div>}
-                      </div>
-                      <div className="p-4 sm:p-5">
-                        {article.news_categories && (
-                          <span className="text-xs font-bold text-primary uppercase tracking-wider">{article.news_categories.name}</span>
-                        )}
-                        <h3 className="text-sm sm:text-base font-bold mt-1.5 mb-2 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                          {article.title}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">{article.excerpt}</p>
-                        {article.published_at && (
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />{formatDate(article.published_at, lang)}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
+                  {rest.map((article, i) => {
+                    const artTitle   = (lang === 'en' && (article as any).title_en)   ? (article as any).title_en   : article.title;
+                    const artExcerpt = (lang === 'en' && (article as any).excerpt_en) ? (article as any).excerpt_en : article.excerpt;
+                    return (
+                      <Link
+                        key={article.id}
+                        href={`/news/${article.slug}`}
+                        className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
+                        style={{ animationDelay: `${i * 60}ms` }}
+                      >
+                        <div className="aspect-[16/10] overflow-hidden bg-muted">
+                          {article.featured_image_url
+                            ? <img src={article.featured_image_url} alt={artTitle} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                            : <div className="h-full w-full flex items-center justify-center"><Newspaper className="h-10 w-10 text-muted-foreground/30" /></div>}
+                        </div>
+                        <div className="p-4 sm:p-5">
+                          {article.news_categories && (
+                            <span className="text-xs font-bold text-primary uppercase tracking-wider">{article.news_categories.name}</span>
+                          )}
+                          <h3 className="text-sm sm:text-base font-bold mt-1.5 mb-2 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                            {artTitle}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">{artExcerpt}</p>
+                          {article.published_at && (
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />{formatDate(article.published_at, lang)}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </>
