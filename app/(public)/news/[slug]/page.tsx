@@ -29,24 +29,42 @@ export default function NewsArticlePage() {
 
   useEffect(() => {
     if (!params?.slug) return;
-    let foundId: string | null = null;
-    fetch(`/api/news?slug=${encodeURIComponent(params.slug)}`)
-      .then(r => r.ok ? r.json() : [])
-      .then(async (arr: News[]) => {
-        const found = arr[0] ?? null;
-        if (!found) { setNotFound(true); setLoading(false); return; }
-        foundId = found.id;
+
+    async function load() {
+      try {
+        // Fetch by slug
+        const res = await fetch(`/api/news?slug=${encodeURIComponent(params.slug)}`);
+        const arr: News[] = res.ok ? await res.json() : [];
+        const found = Array.isArray(arr) ? (arr[0] ?? null) : null;
+
+        if (!found) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
         setArticle(found);
+
         // Fetch media and related in parallel
         const [mediaRes, allRes] = await Promise.all([
-          fetch(`/api/news/${found.id}/media`).then(r => r.ok ? r.json() : []),
-          fetch(`/api/news?limit=6`).then(r => r.ok ? r.json() : []),
+          fetch(`/api/news/${found.id}/media`).then(r => r.ok ? r.json() : []).catch(() => []),
+          fetch(`/api/news?limit=6`).then(r => r.ok ? r.json() : []).catch(() => []),
         ]);
+
         setMedia(Array.isArray(mediaRes) ? mediaRes : []);
-        setRelated(Array.isArray(allRes) ? allRes.filter((a: News) => a.id !== foundId).slice(0, 3) : []);
+        setRelated(
+          Array.isArray(allRes)
+            ? (allRes as News[]).filter(a => a.id !== found.id).slice(0, 3)
+            : []
+        );
+      } catch {
+        setNotFound(true);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => { setNotFound(true); setLoading(false); });
+      }
+    }
+
+    load();
   }, [params?.slug]);
 
   // Keyboard nav for lightbox
