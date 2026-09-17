@@ -29,7 +29,7 @@ const POSITIONS: Position[] = [
   {
     role:    { hi: 'जिला अध्यक्ष',  en: 'District President' },
     org:     { hi: 'भारतीय जनता युवा मोर्चा, भोपाल ग्रामीण', en: 'Bharatiya Janata Yuva Morcha, Bhopal Rural' },
-    period:  { hi: '2021 – 2025', en: '2021 – 2025' },
+    period:  { hi: '2021 – 2026', en: '2021 – 2026' },
     current: false,
     category: 'political',
   },
@@ -57,7 +57,7 @@ const POSITIONS: Position[] = [
   {
     role:    { hi: 'राष्ट्रीय महासचिव', en: 'National General Secretary' },
     org:     { hi: 'गहलोत मेवाड़ा राजपूत समाज संगठन, युवापरिषद', en: 'Gahlot Mewada Rajput Samaj Sangathan, Yuva Parishad' },
-    period:  { hi: '2015 – 2025', en: '2015 – 2025' },
+    period:  { hi: '2015 – 2026', en: '2015 – 2026' },
     current: false,
     category: 'social',
   },
