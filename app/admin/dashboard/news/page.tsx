@@ -255,20 +255,24 @@ export default function NewsAdminPage() {
     }
     if (m.media_type === 'video') {
       const embed = getVideoEmbed(m.url);
-      if (embed.type === 'youtube') return (
-        <div className="w-48 aspect-video rounded overflow-hidden">
-          <iframe src={embed.embedUrl} className="h-full w-full" allowFullScreen />
-        </div>
-      );
-      if (embed.type === 'facebook') return (
-        <div className="w-48">
-          <iframe
-            src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(m.url)}&width=200&show_text=false`}
-            width="200" height="113" scrolling="no" className="rounded overflow-hidden"
-            allowFullScreen allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-          />
-        </div>
-      );
+      if (embed.type === 'youtube') {
+        return (
+          <div className="w-48 aspect-video rounded overflow-hidden">
+            <iframe src={embed.embedUrl} className="h-full w-full" allowFullScreen />
+          </div>
+        );
+      }
+      if (embed.type === 'facebook') {
+        return (
+          <div className="w-48">
+            <iframe
+              src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(m.url)}&width=200&show_text=false`}
+              width="200" height="113" scrolling="no" className="rounded overflow-hidden"
+              allowFullScreen allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            />
+          </div>
+        );
+      }
       return <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[200px] block">{m.url}</a>;
     }
     return <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[200px] block">{m.caption || m.url}</a>;
