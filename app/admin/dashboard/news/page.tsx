@@ -201,6 +201,11 @@ export default function NewsAdminPage() {
     const files = Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS);
     console.log('📸 Files selected:', files.length, 'files'); // DEBUG
     console.log('📸 Input multiple attribute:', e.target.multiple); // DEBUG
+    console.log('📸 Input attributes:', {
+      multiple: e.target.getAttribute('multiple'),
+      accept: e.target.getAttribute('accept'),
+      type: e.target.type
+    }); // DEBUG
     const items: QueueItem[] = files.map(f => ({
       id: Math.random().toString(36).slice(2), file: f,
       preview: URL.createObjectURL(f), status: 'pending', cloudUrl: '', error: '',
@@ -208,6 +213,14 @@ export default function NewsAdminPage() {
     setPhotoQueue(items); setBulkDone(false);
     if (bulkInputRef.current) bulkInputRef.current.value = '';
   };
+  
+  // Force set multiple attribute on mount and when media panel opens
+  useEffect(() => {
+    if (bulkInputRef.current && mediaArticleId) {
+      bulkInputRef.current.setAttribute('multiple', '');
+      console.log('✅ Multiple attribute set on input:', bulkInputRef.current.hasAttribute('multiple'));
+    }
+  }, [mediaArticleId]);
 
   const handleBulkUpload = async () => {
     if (!token || !mediaArticleId || photoQueue.length === 0) return;
@@ -584,7 +597,7 @@ export default function NewsAdminPage() {
               ref={bulkInputRef} 
               type="file" 
               accept="image/*" 
-              multiple 
+              multiple={true}
               className="hidden" 
               onChange={handlePhotoSelect}
               key="bulk-photo-input"
