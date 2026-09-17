@@ -199,6 +199,8 @@ export default function NewsAdminPage() {
   /* ── Bulk photo select ── */
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS);
+    console.log('📸 Files selected:', files.length, 'files'); // DEBUG
+    console.log('📸 Input multiple attribute:', e.target.multiple); // DEBUG
     const items: QueueItem[] = files.map(f => ({
       id: Math.random().toString(36).slice(2), file: f,
       preview: URL.createObjectURL(f), status: 'pending', cloudUrl: '', error: '',
@@ -466,7 +468,11 @@ export default function NewsAdminPage() {
                               {mediaTab === 'photo' && (
                                 <div className="space-y-3">
                                   {photoQueue.length === 0 ? (
-                                    <button onClick={() => bulkInputRef.current?.click()}
+                                    <button onClick={() => {
+                                      console.log('🖱️ Button clicked, ref:', bulkInputRef.current);
+                                      console.log('🖱️ Input element multiple attr:', bulkInputRef.current?.multiple);
+                                      bulkInputRef.current?.click();
+                                    }}
                                       className="w-full flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary/40 bg-muted/30 hover:bg-primary/5 py-6 transition-all group">
                                       <Upload className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
                                       <span className="text-sm font-medium text-muted-foreground group-hover:text-primary">Click to select photos (max {MAX_PHOTOS})</span>
@@ -483,7 +489,11 @@ export default function NewsAdminPage() {
                                           </div>
                                         ))}
                                         {photoQueue.length < MAX_PHOTOS && !bulkUploading && !bulkDone && (
-                                          <button onClick={() => bulkInputRef.current?.click()}
+                                          <button onClick={() => {
+                                            console.log('➕ Add more clicked, ref:', bulkInputRef.current);
+                                            console.log('➕ Input multiple:', bulkInputRef.current?.multiple);
+                                            bulkInputRef.current?.click();
+                                          }}
                                             className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/40 bg-muted/30 flex items-center justify-center hover:bg-primary/5 transition-all">
                                             <Plus className="h-4 w-4 text-muted-foreground" />
                                           </button>
@@ -570,7 +580,16 @@ export default function NewsAdminPage() {
             </table>
             
             {/* Hidden file input - always in DOM, outside table to prevent re-renders */}
-            <input ref={bulkInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
+            <input 
+              ref={bulkInputRef} 
+              type="file" 
+              accept="image/*" 
+              multiple 
+              className="hidden" 
+              onChange={handlePhotoSelect}
+              key="bulk-photo-input"
+              id="bulk-photo-input"
+            />
           </div>
         </div>
       )}
