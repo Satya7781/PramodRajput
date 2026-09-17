@@ -567,7 +567,7 @@ export default function NewsAdminPage() {
                       </tr>
                     )}
                   </>
-                  );
+                );
                 })}
               </tbody>
             </table>
