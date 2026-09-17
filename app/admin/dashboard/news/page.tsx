@@ -559,10 +559,8 @@ export default function NewsAdminPage() {
                                 </div>
                               )}
                             </div>
-
-                            {/* Hidden file inputs - always in DOM */}
-                            <input ref={bulkInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
                           )}
+                          <input ref={bulkInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
                         </td>
                       </tr>
                     )}
