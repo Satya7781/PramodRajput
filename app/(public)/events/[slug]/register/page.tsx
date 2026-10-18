@@ -20,7 +20,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!params?.slug) return;
-    fetch(`/api/events/slug/${encodeURIComponent(params.slug)}`)
+    fetch(`/api/events/slug/${params.slug}`)
       .then(r => r.ok ? r.json() : null)
       .then(async (ev: Event | null) => {
         if (!ev) { setNotFound(true); setLoading(false); return; }

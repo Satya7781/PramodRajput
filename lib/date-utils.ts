@@ -40,16 +40,17 @@ export function formatTime(timeStr: string | null | undefined): string {
 export function slugify(text: string): string {
   // If text contains non-ASCII (Hindi/Devanagari), generate a timestamp-based slug
   if (/[^\x00-\x7F]/.test(text)) {
-    // Try to transliterate common Hindi words, otherwise use timestamp
     const timestamp = Date.now().toString(36);
-    // Take first few ASCII words if any exist
     const asciiPart = text.replace(/[^\x00-\x7F]+/g, '-').replace(/^-+|-+$/g, '').replace(/-+/g, '-').toLowerCase().slice(0, 30).trim();
-    return asciiPart && asciiPart.length > 2 ? `${asciiPart}-${timestamp}` : `news-${timestamp}`;
+    return asciiPart && asciiPart.length > 2 ? `${asciiPart}-${timestamp}` : `event-${timestamp}`;
   }
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
+    // Replace apostrophes/quotes/special punctuation before other processing
+    .replace(/['''"""`]/g, '')
+    // Replace any non-alphanumeric character (except hyphens) with a hyphen
+    .replace(/[^a-z0-9]+/g, '-')
+    // Remove leading/trailing hyphens
     .replace(/^-+|-+$/g, '');
 }

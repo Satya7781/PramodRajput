@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/certificate-templates — admin: create a new template
+// POST /api/certificate-templates — admin: create a new template (including fields in one shot)
 export async function POST(req: NextRequest) {
   const authResult = requireAdmin(req);
   if (isResponse(authResult)) return authResult;
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     const {
       name, description, background_url,
       width = 1200, height = 850, orientation = 'landscape',
+      fields,
     } = body as {
       name: string;
       description?: string;
@@ -57,11 +58,24 @@ export async function POST(req: NextRequest) {
       width?: number;
       height?: number;
       orientation?: string;
+      fields?: Array<{
+        field_key: string;
+        label: string;
+        x_position: number;
+        y_position: number;
+        width?: number;
+        height?: number;
+        font_family?: string;
+        font_size?: number;
+        font_weight?: string;
+        text_align?: string;
+        color?: string;
+      }>;
     };
 
     if (!name?.trim()) return err('Template name is required');
 
-    const template = await queryOne(
+    const template = await queryOne<{ id: string }>(
       `INSERT INTO certificate_templates
          (name, description, background_url, width, height, orientation, is_active, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, true, $7) RETURNING *`,
@@ -76,7 +90,35 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    await writeAuditLog(user.id, 'CREATE_CERTIFICATE_TEMPLATE', 'certificate_templates', (template as { id: string }).id, { name });
+    if (!template) return err('Failed to create template', 500);
+
+    // Save fields if provided (avoids needing a separate PUT call)
+    if (fields && fields.length > 0) {
+      for (const f of fields) {
+        await query(
+          `INSERT INTO certificate_template_fields
+             (template_id, field_key, label, x_position, y_position, width, height,
+              font_family, font_size, font_weight, text_align, color)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+          [
+            template.id,
+            f.field_key,
+            f.label,
+            f.x_position,
+            f.y_position,
+            f.width ?? 300,
+            f.height ?? 50,
+            f.font_family ?? 'Helvetica',
+            f.font_size ?? 24,
+            f.font_weight ?? 'normal',
+            f.text_align ?? 'center',
+            f.color ?? '#000000',
+          ]
+        );
+      }
+    }
+
+    await writeAuditLog(user.id, 'CREATE_CERTIFICATE_TEMPLATE', 'certificate_templates', template.id, { name });
     return ok(template, 201);
   } catch (e) {
     console.error('POST /api/certificate-templates error:', e);

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { events as eventsApi, getAuthToken } from '@/lib/api-client';
+import { events as eventsApi, certificates as certsApi, getAuthToken } from '@/lib/api-client';
 import { uploadToCloudinary } from '@/lib/upload';
 import type { Event } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, Upload, Languages } from 'lucide-react';
+import { Loader2, Save, Upload, Languages, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import { slugify } from '@/lib/date-utils';
 import { useAutoTranslate } from '@/lib/use-translate';
@@ -45,10 +45,17 @@ export function EventForm({ event }: EventFormProps) {
   const [maxParticipants, setMaxParticipants] = useState(event?.max_participants?.toString() ?? '');
   const [registrationEnabled, setRegistrationEnabled] = useState(event?.registration_enabled ?? false);
   const [certificateEnabled, setCertificateEnabled] = useState(event?.certificate_enabled ?? false);
+  const [certificateTemplateId, setCertificateTemplateId] = useState(event?.certificate_template_id ?? '');
+  const [templates, setTemplates] = useState<{ id: string; name: string }[]>([]);
   const [status, setStatus] = useState<EventStatus>(event?.status ?? 'draft');
   const [saving, setSaving] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const { autoTranslate, translating } = useAutoTranslate();
+
+  // Load available certificate templates
+  useEffect(() => {
+    certsApi.templates().then(setTemplates).catch(() => {});
+  }, []);
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -85,6 +92,7 @@ export function EventForm({ event }: EventFormProps) {
       max_participants: maxParticipants ? parseInt(maxParticipants) : null,
       registration_enabled: registrationEnabled,
       certificate_enabled: certificateEnabled,
+      certificate_template_id: certificateEnabled ? (certificateTemplateId || null) : null,
       status,
       title_en: titleEn.trim() || null,
       short_description_en: shortDescriptionEn.trim() || null,
@@ -218,6 +226,40 @@ export function EventForm({ event }: EventFormProps) {
             <input type="checkbox" className="h-4 w-4 rounded border-border accent-primary" checked={certificateEnabled} onChange={(e) => setCertificateEnabled(e.target.checked)} />
             <span className="text-sm font-medium">Enable certificate issuance</span>
           </label>
+          {/* Certificate template selector — shown when certificate issuance is enabled */}
+          {certificateEnabled && (
+            <div className="ml-7 space-y-1.5">
+              <Label htmlFor="certTemplate" className="flex items-center gap-1.5 text-sm">
+                <Award className="h-3.5 w-3.5 text-primary" />
+                Certificate Template
+              </Label>
+              {templates.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No templates available.{' '}
+                  <a href="/admin/dashboard/certificate-templates" target="_blank" className="text-primary underline">
+                    Create one first →
+                  </a>
+                </p>
+              ) : (
+                <>
+                  <Select value={certificateTemplateId || 'none'} onValueChange={(v) => setCertificateTemplateId(v === 'none' ? '' : v)}>
+                    <SelectTrigger id="certTemplate" className="max-w-xs">
+                      <SelectValue placeholder="Select a template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— No template selected —</SelectItem>
+                      {templates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This template will be used as the default when issuing certificates for this event.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

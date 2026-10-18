@@ -40,9 +40,28 @@ export default function CertificatesPage() {
     ]).then(([evs, tmpls]) => {
       setEventList(evs);
       setTemplates(tmpls);
+      // Pre-select the template assigned to the initially-selected event
+      if (eventParam !== 'all') {
+        const ev = evs.find((e) => e.id === eventParam);
+        const tmplId = (ev as any)?.certificate_template_id;
+        if (tmplId) {
+          setSelectedTemplate(tmplId);
+          return;
+        }
+      }
       if (tmpls.length > 0) setSelectedTemplate(tmpls[0].id);
     }).catch(() => {});
   }, []);
+
+  // Auto-select the template assigned to the chosen event
+  useEffect(() => {
+    if (selectedEvent === 'all') return;
+    const ev = eventList.find((e) => e.id === selectedEvent);
+    const tmplId = (ev as any)?.certificate_template_id;
+    if (tmplId && templates.some((t) => t.id === tmplId)) {
+      setSelectedTemplate(tmplId);
+    }
+  }, [selectedEvent, eventList, templates]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);

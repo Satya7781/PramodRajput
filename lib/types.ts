@@ -40,6 +40,7 @@ export interface Event {
   max_participants: number | null;
   registration_enabled: boolean;
   certificate_enabled: boolean;
+  certificate_template_id: string | null;
   status: EventStatus;
   created_by: string | null;
   created_at: string;

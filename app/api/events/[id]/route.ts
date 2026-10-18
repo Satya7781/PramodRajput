@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       title, slug, short_description, description, banner_url,
       start_date, end_date, start_time, end_time, venue, address,
       registration_start, registration_end, max_participants,
-      registration_enabled, certificate_enabled, status,
+      registration_enabled, certificate_enabled, certificate_template_id, status,
     } = body;
 
     let { title_en, short_description_en, description_en } = body as {
@@ -53,14 +53,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
          start_date=$6, end_date=$7, start_time=$8, end_time=$9,
          venue=$10, address=$11, registration_start=$12, registration_end=$13,
          max_participants=$14, registration_enabled=$15, certificate_enabled=$16,
-         status=$17, title_en=$18, short_description_en=$19, description_en=$20,
+         certificate_template_id=$17, status=$18,
+         title_en=$19, short_description_en=$20, description_en=$21,
          updated_at=now()
-       WHERE id=$21 RETURNING *`,
+       WHERE id=$22 RETURNING *`,
       [
         title, slug, short_description || null, description || null, banner_url || null,
         start_date || null, end_date || null, start_time || null, end_time || null,
         venue || null, address || null, registration_start || null, registration_end || null,
         max_participants || null, registration_enabled ?? false, certificate_enabled ?? false,
+        certificate_template_id || null,
         status || 'draft',
         title_en || null, short_description_en || null, description_en || null,
         params.id,

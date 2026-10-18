@@ -44,7 +44,7 @@ export default function EventDetailPage() {
   useEffect(() => {
     if (!slug) return;
 
-    fetch(`/api/events/slug/${encodeURIComponent(slug)}`)
+    fetch(`/api/events/slug/${slug}`)
       .then(r => r.ok ? r.json() : null)
       .then(async (ev: Event | null) => {
         if (ev) {

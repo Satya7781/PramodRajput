@@ -18,7 +18,7 @@ export default function AlbumPage() {
 
   useEffect(() => {
     if (!params?.slug) return;
-    fetch(`/api/albums/slug/${encodeURIComponent(params.slug)}`)
+    fetch(`/api/albums/slug/${params.slug}`)
       .then(r => { if (!r.ok) { setNotFound(true); setLoading(false); return null; } return r.json(); })
       .then((data: { album: PhotoAlbum; photos: Photo[] } | null) => {
         if (data) { setAlbum(data.album); setPhotos(data.photos); }

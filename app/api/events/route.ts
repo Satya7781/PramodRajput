@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       title, slug, short_description, description, banner_url,
       start_date, end_date, start_time, end_time, venue, address,
       registration_start, registration_end, max_participants,
-      registration_enabled, certificate_enabled, status,
+      registration_enabled, certificate_enabled, certificate_template_id, status,
     } = body;
 
     if (!title || !slug) return err('Title and slug are required');
@@ -115,15 +115,16 @@ export async function POST(req: NextRequest) {
          (title, slug, short_description, description, banner_url,
           start_date, end_date, start_time, end_time, venue, address,
           registration_start, registration_end, max_participants,
-          registration_enabled, certificate_enabled, status, created_by,
+          registration_enabled, certificate_enabled, certificate_template_id, status, created_by,
           title_en, short_description_en, description_en)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
        RETURNING *`,
       [
         title, slug, short_description || null, description || null, banner_url || null,
         start_date || null, end_date || null, start_time || null, end_time || null,
         venue || null, address || null, registration_start || null, registration_end || null,
         max_participants || null, registration_enabled ?? false, certificate_enabled ?? false,
+        certificate_template_id || null,
         status || 'draft', user.id,
         title_en || null, short_description_en || null, description_en || null,
       ]

@@ -5,9 +5,13 @@ import { query, queryOne } from '@/lib/db';
 // GET /api/memories/slug/[slug] — public
 export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
   try {
+    let slug = params.slug;
+    try { slug = decodeURIComponent(slug); } catch { /* leave as-is */ }
+    if (slug.includes('%')) { try { slug = decodeURIComponent(slug); } catch { /* leave as-is */ } }
+
     const memory = await queryOne(
       `SELECT * FROM event_memories WHERE slug = $1 AND status = 'published'`,
-      [params.slug]
+      [slug]
     );
     if (!memory) return err('Memory not found', 404);
 

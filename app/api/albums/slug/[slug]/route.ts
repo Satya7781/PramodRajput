@@ -4,9 +4,13 @@ import { query, queryOne } from '@/lib/db';
 
 export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
   try {
+    let slug = params.slug;
+    try { slug = decodeURIComponent(slug); } catch { /* leave as-is */ }
+    if (slug.includes('%')) { try { slug = decodeURIComponent(slug); } catch { /* leave as-is */ } }
+
     const album = await queryOne(
       `SELECT * FROM photo_albums WHERE slug=$1 AND status='published'`,
-      [params.slug]
+      [slug]
     );
     if (!album) return err('Album not found', 404);
 
