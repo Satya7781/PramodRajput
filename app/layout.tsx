@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 const SITE_NAME    = process.env.NEXT_PUBLIC_SITE_NAME    ?? 'Pramod Rajput';
 const SITE_TAGLINE = process.env.NEXT_PUBLIC_SITE_TAGLINE ?? 'Serving People, Building Tomorrow';
 const SITE_DESC    = process.env.NEXT_PUBLIC_SITE_DESC    ?? `Official digital platform of ${SITE_NAME} — public servant, community leader, and advocate for grassroots development.`;
-const OG_IMAGE     = process.env.NEXT_PUBLIC_OG_IMAGE     ?? 'https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=1200';
+const OG_IMAGE     = process.env.NEXT_PUBLIC_OG_IMAGE     ?? 'https://www.pramodrajput.co.in/og-image.png';
 const FAVICON_URL  = process.env.NEXT_PUBLIC_FAVICON_URL  ?? '/favicon.png';
 
 export const metadata: Metadata = {
@@ -26,11 +26,15 @@ export const metadata: Metadata = {
   openGraph: {
     title:       `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: SITE_DESC,
-    images:      [{ url: OG_IMAGE }],
+    images:      [{ url: OG_IMAGE, width: 720, height: 900, alt: SITE_NAME }],
+    siteName:    SITE_NAME,
+    type:        'website',
   },
   twitter: {
-    card:   'summary_large_image',
-    images: [{ url: OG_IMAGE }],
+    card:        'summary_large_image',
+    title:       `${SITE_NAME} | ${SITE_TAGLINE}`,
+    description: SITE_DESC,
+    images:      [{ url: OG_IMAGE, alt: SITE_NAME }],
   },
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
