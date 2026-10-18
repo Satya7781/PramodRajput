@@ -134,7 +134,7 @@ export default function NewsAdminPage() {
       excerpt: form.excerpt.trim() || null, content: form.content.trim() || null,
       featured_image_url: form.featured_image_url.trim() || null,
       category_id: form.category_id || null, status: form.status,
-      published_at: form.status === 'published' ? new Date().toISOString() : null,
+      // Do NOT send published_at — the API manages it correctly
       title_en: form.title_en.trim() || null,
       excerpt_en: form.excerpt_en.trim() || null,
       content_en: form.content_en.trim() || null,

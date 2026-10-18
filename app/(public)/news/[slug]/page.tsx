@@ -32,7 +32,8 @@ export default function NewsArticlePage() {
 
     async function load() {
       try {
-        const res = await fetch(`/api/news?slug=${encodeURIComponent(params.slug)}`);
+        // Do NOT encodeURIComponent — Next.js already encodes route params
+        const res = await fetch(`/api/news?slug=${params.slug}`);
         const arr: News[] = res.ok ? await res.json() : [];
         const found = Array.isArray(arr) ? (arr[0] ?? null) : null;
 
@@ -120,8 +121,33 @@ export default function NewsArticlePage() {
 
           {/* Article text */}
           <div className="max-w-3xl">
-            {excerpt && <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-medium border-l-4 border-primary pl-4">{excerpt}</p>}
-            <div className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-line">{content}</div>
+            {excerpt && (
+              <p className="text-sm sm:text-lg text-muted-foreground leading-relaxed mb-6 sm:mb-8 font-medium border-l-4 border-primary pl-4">
+                {excerpt}
+              </p>
+            )}
+            {content ? (
+              // Detect if content contains HTML tags — render as HTML, otherwise as plain text
+              content.includes('<') && content.includes('>') ? (
+                <div
+                  className="prose prose-sm sm:prose max-w-none text-foreground leading-relaxed
+                    prose-headings:font-bold prose-headings:text-foreground
+                    prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                    prose-img:rounded-xl prose-img:border prose-img:border-border
+                    prose-blockquote:border-primary prose-blockquote:text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: content }}
+                />
+              ) : (
+                <div className="text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-line space-y-4">
+                  {content}
+                </div>
+              )
+            ) : (
+              // No content — show excerpt expanded or a message
+              !excerpt && (
+                <p className="text-sm text-muted-foreground italic">No content available.</p>
+              )
+            )}
           </div>
 
           {/* Photos */}
