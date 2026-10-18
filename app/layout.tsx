@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 const SITE_NAME    = process.env.NEXT_PUBLIC_SITE_NAME    ?? 'Pramod Rajput';
 const SITE_TAGLINE = process.env.NEXT_PUBLIC_SITE_TAGLINE ?? 'Serving People, Building Tomorrow';
 const SITE_DESC    = process.env.NEXT_PUBLIC_SITE_DESC    ?? `Official digital platform of ${SITE_NAME} — public servant, community leader, and advocate for grassroots development.`;
-const OG_IMAGE     = process.env.NEXT_PUBLIC_OG_IMAGE     ?? 'https://www.pramodrajput.co.in/og-image.png';
+const OG_IMAGE     = process.env.NEXT_PUBLIC_OG_IMAGE     ?? 'https://www.pramodrajput.co.in/og-image.png?v=2';
 const FAVICON_URL  = process.env.NEXT_PUBLIC_FAVICON_URL  ?? '/favicon.png';
 
 export const metadata: Metadata = {
