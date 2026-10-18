@@ -64,16 +64,34 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     );
 
     if (form) {
-      await queryOne(
-        `UPDATE event_forms SET title=$1, description=$2, name_field_key=$3, updated_at=now() WHERE id=$4`,
-        [title, description || null, name_field_key || null, form.id]
-      );
+      // Try updating with name_field_key (requires migration_v4/v5 to have run)
+      try {
+        await queryOne(
+          `UPDATE event_forms SET title=$1, description=$2, name_field_key=$3, updated_at=now() WHERE id=$4`,
+          [title, description || null, name_field_key || null, form.id]
+        );
+      } catch {
+        // Fallback: column may not exist yet — update without it
+        await queryOne(
+          `UPDATE event_forms SET title=$1, description=$2, updated_at=now() WHERE id=$3`,
+          [title, description || null, form.id]
+        );
+      }
     } else {
-      form = await queryOne<{ id: string }>(
-        `INSERT INTO event_forms (event_id, title, description, name_field_key, is_active)
-         VALUES ($1,$2,$3,$4,true) RETURNING id`,
-        [params.id, title, description || null, name_field_key || null]
-      );
+      try {
+        form = await queryOne<{ id: string }>(
+          `INSERT INTO event_forms (event_id, title, description, name_field_key, is_active)
+           VALUES ($1,$2,$3,$4,true) RETURNING id`,
+          [params.id, title, description || null, name_field_key || null]
+        );
+      } catch {
+        // Fallback without name_field_key column
+        form = await queryOne<{ id: string }>(
+          `INSERT INTO event_forms (event_id, title, description, is_active)
+           VALUES ($1,$2,$3,true) RETURNING id`,
+          [params.id, title, description || null]
+        );
+      }
     }
 
     if (!form) return err('Failed to upsert form', 500);

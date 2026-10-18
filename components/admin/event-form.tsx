@@ -34,10 +34,13 @@ export function EventForm({ event }: EventFormProps) {
   const [description, setDescription] = useState(event?.description ?? '');
   const [descriptionEn, setDescriptionEn] = useState((event as any)?.description_en ?? '');
   const [bannerUrl, setBannerUrl] = useState(event?.banner_url ?? '');
-  const [startDate, setStartDate] = useState(event?.start_date ?? '');
-  const [endDate, setEndDate] = useState(event?.end_date ?? '');
-  const [startTime, setStartTime] = useState(event?.start_time ?? '');
-  const [endTime, setEndTime] = useState(event?.end_time ?? '');
+  // Normalize dates — DB may return full ISO timestamps, date inputs need yyyy-MM-dd
+  const toDateInput = (val: string | null | undefined) =>
+    val ? val.slice(0, 10) : '';
+  const [startDate, setStartDate] = useState(toDateInput(event?.start_date));
+  const [endDate, setEndDate] = useState(toDateInput(event?.end_date));
+  const [startTime, setStartTime] = useState(event?.start_time?.slice(0, 5) ?? '');
+  const [endTime, setEndTime] = useState(event?.end_time?.slice(0, 5) ?? '');
   const [venue, setVenue] = useState(event?.venue ?? '');
   const [address, setAddress] = useState(event?.address ?? '');
   const [regStart, setRegStart] = useState(event?.registration_start ? event.registration_start.slice(0, 16) : '');
