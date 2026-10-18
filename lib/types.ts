@@ -51,6 +51,8 @@ export interface EventForm {
   event_id: string;
   title: string;
   description: string | null;
+  /** field_key of the form field that contains the participant's name (used on certificates) */
+  name_field_key: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

@@ -41,18 +41,17 @@ export async function POST(req: NextRequest) {
     const { event_id, form_id, values } = body as {
       event_id: string;
       form_id: string;
-      values: Array<{ field_id: string; value_text: string }>;
+      values: Array<{ field_id: string; value_text: string; file_url?: string }>;
     };
 
     if (!event_id || !form_id) return err('event_id and form_id are required');
 
-    // Generate registration number: PR-YYYY-NNNNNN
+    // Generate registration number atomically using a DB sequence to avoid race conditions
     const year = new Date().getFullYear().toString();
-    const countRow = await queryOne<{ count: string }>(
-      `SELECT COUNT(*) as count FROM registrations WHERE registration_number LIKE $1`,
-      [`PR-${year}-%`]
+    const seqRow = await queryOne<{ nextval: string }>(
+      `SELECT nextval('registration_number_seq') AS nextval`
     );
-    const nextNum = (parseInt(countRow?.count ?? '0', 10) + 1).toString().padStart(6, '0');
+    const nextNum = parseInt(seqRow?.nextval ?? '1', 10).toString().padStart(6, '0');
     const registrationNumber = `PR-${year}-${nextNum}`;
 
     const registration = await queryOne(
@@ -66,11 +65,23 @@ export async function POST(req: NextRequest) {
     // Insert field values
     if (values && values.length > 0) {
       for (const v of values) {
-        if (v.value_text) {
+        if (v.value_text || v.file_url) {
+          // For checkbox (comma-separated), also store as JSON array in value_json
+          const isMultiValue = v.value_text?.includes(',');
+          const valueJson = isMultiValue
+            ? JSON.stringify(v.value_text.split(',').filter(Boolean))
+            : null;
+
           await query(
-            `INSERT INTO registration_values (registration_id, field_id, value_text)
-             VALUES ($1,$2,$3)`,
-            [(registration as { id: string }).id, v.field_id, v.value_text]
+            `INSERT INTO registration_values (registration_id, field_id, value_text, value_json, file_url)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [
+              (registration as { id: string }).id,
+              v.field_id,
+              v.value_text || null,
+              valueJson,
+              (v as { field_id: string; value_text: string; file_url?: string }).file_url || null,
+            ]
           );
         }
       }

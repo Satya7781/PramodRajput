@@ -52,25 +52,87 @@ export async function POST(req: NextRequest) {
       return err('registration_id, event_id, template_id, and participant_name are required');
     }
 
-    // Generate certificate number: PR-CERT-YYYY-NNNNNN
+    // Generate certificate number atomically using a DB sequence to avoid race conditions
     const year = new Date().getFullYear().toString();
-    const countRow = await queryOne<{ count: string }>(
-      `SELECT COUNT(*) as count FROM certificates WHERE certificate_number LIKE $1`,
-      [`PR-CERT-${year}-%`]
+    const seqRow = await queryOne<{ nextval: string }>(
+      `SELECT nextval('certificate_number_seq') AS nextval`
     );
-    const nextNum = (parseInt(countRow?.count ?? '0', 10) + 1).toString().padStart(6, '0');
+    const nextNum = parseInt(seqRow?.nextval ?? '1', 10).toString().padStart(6, '0');
     const certificateNumber = `PR-CERT-${year}-${nextNum}`;
     const verificationToken = randomBytes(32).toString('hex');
 
-    const cert = await queryOne(
+    // Insert the certificate record first
+    const cert = await queryOne<{
+      id: string;
+      certificate_number: string;
+      verification_token: string;
+      participant_name: string;
+      [key: string]: unknown;
+    }>(
       `INSERT INTO certificates
          (certificate_number, registration_id, event_id, template_id, participant_name, verification_token, status)
        VALUES ($1,$2,$3,$4,$5,$6,'valid') RETURNING *`,
       [certificateNumber, registration_id, event_id, template_id, participant_name, verificationToken]
     );
 
-    await writeAuditLog(user.id, 'ISSUE_CERTIFICATE', 'certificates', (cert as { id: string }).id, { participant_name });
-    return ok(cert, 201);
+    if (!cert) return err('Failed to create certificate record', 500);
+
+    // Generate the PDF using the template background and field positions
+    let pdfUrl: string | null = null;
+    try {
+      const template = await queryOne<{
+        background_url: string | null;
+        width: number;
+        height: number;
+        orientation: string;
+      }>(
+        `SELECT background_url, width, height, orientation FROM certificate_templates WHERE id=$1`,
+        [template_id]
+      );
+
+      const templateFields = await query<{
+        field_key: string;
+        label: string;
+        x_position: number;
+        y_position: number;
+        width: number;
+        height: number;
+        font_family: string;
+        font_size: number;
+        font_weight: string;
+        text_align: string;
+        color: string;
+      }>(
+        `SELECT field_key, label, x_position, y_position, width, height,
+                font_family, font_size, font_weight, text_align, color
+         FROM certificate_template_fields WHERE template_id=$1`,
+        [template_id]
+      );
+
+      if (template?.background_url && templateFields.length > 0) {
+        const { generateCertificatePdf } = await import('@/lib/generate-certificate-pdf');
+        pdfUrl = await generateCertificatePdf({
+          backgroundUrl: template.background_url,
+          templateWidth: template.width,
+          templateHeight: template.height,
+          orientation: template.orientation,
+          fields: templateFields,
+          fieldValues: { participant_name, certificate_number: certificateNumber },
+        });
+
+        // Update the certificate row with the generated PDF URL
+        await queryOne(
+          `UPDATE certificates SET pdf_url=$1, updated_at=now() WHERE id=$2`,
+          [pdfUrl, cert.id]
+        );
+      }
+    } catch (pdfErr) {
+      // PDF generation failure is non-fatal — certificate record is already created
+      console.error('PDF generation error (non-fatal):', pdfErr);
+    }
+
+    await writeAuditLog(user.id, 'ISSUE_CERTIFICATE', 'certificates', cert.id, { participant_name, pdf_generated: !!pdfUrl });
+    return ok({ ...cert, pdf_url: pdfUrl }, 201);
   } catch (e) {
     console.error('POST /api/certificates error:', e);
     return err('Internal server error', 500);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { events as eventsApi, registrations as regsApi } from '@/lib/api-client';
@@ -75,13 +75,43 @@ export default function RegistrationsPage() {
 
   const filtered = regList.filter((r) => !search || r.registration_number.toLowerCase().includes(search.toLowerCase()));
 
-  const exportCSV = () => {
-    const rows = [['Registration #', 'Event', 'Status', 'Submitted At']];
-    filtered.forEach((r) => rows.push([r.registration_number, r.event_title ?? '', r.status, formatDateTime(r.submitted_at)]));
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+  const exportCSV = async () => {
+    // Collect all registration details including form values
+    const enriched = await Promise.all(
+      filtered.map(async (r) => {
+        if (r.values) return r;
+        try {
+          const vals = await regsApi.getValues(r.id);
+          return { ...r, values: vals };
+        } catch {
+          return r;
+        }
+      })
+    );
+
+    // Build dynamic columns from all possible field labels
+    const allLabels = Array.from(
+      new Set(enriched.flatMap((r) => (r.values ?? []).map((v) => v.label)))
+    );
+
+    const header = ['Registration #', 'Event', 'Status', 'Submitted At', ...allLabels];
+    const rows = enriched.map((r) => {
+      const valueMap: Record<string, string> = {};
+      (r.values ?? []).forEach((v) => { valueMap[v.label] = v.value; });
+      return [
+        r.registration_number,
+        r.event_title ?? '',
+        r.status,
+        formatDateTime(r.submitted_at),
+        ...allLabels.map((l) => valueMap[l] ?? ''),
+      ];
+    });
+
+    const csv = [header, ...rows].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'registrations.csv'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -142,8 +172,8 @@ export default function RegistrationsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((reg) => (
-                  <>
-                    <tr key={reg.id} className="hover:bg-muted/30 transition-colors">
+                  <React.Fragment key={reg.id}>
+                    <tr className="hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 text-sm font-mono font-medium">{reg.registration_number}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{reg.event_title ?? '—'}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{formatDateTime(reg.submitted_at)}</td>
@@ -174,7 +204,7 @@ export default function RegistrationsPage() {
                       </td>
                     </tr>
                     {expandedId === reg.id && (
-                      <tr key={`${reg.id}-detail`} className="bg-muted/20">
+                      <tr className="bg-muted/20">
                         <td colSpan={5} className="px-6 py-4">
                           {reg.values ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -191,7 +221,7 @@ export default function RegistrationsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

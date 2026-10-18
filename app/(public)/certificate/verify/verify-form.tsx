@@ -18,7 +18,11 @@ export function CertificateVerifyForm() {
     e.preventDefault();
     if (!certNumber.trim()) return;
     setLoading(true);
-    router.push(`/certificate/verify/${certNumber.trim()}`);
+    try {
+      await router.push(`/certificate/verify/${certNumber.trim()}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

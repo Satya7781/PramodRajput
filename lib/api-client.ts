@@ -7,14 +7,16 @@
 import type {
   Profile, Event, EventForm, FormField, FormFieldOption,
   Registration, RegistrationValue, News, NewsCategory,
-  PhotoAlbum, Photo, Video, Certificate, SiteSetting, AuditLog,
+  PhotoAlbum, Photo, Video, Certificate, CertificateTemplate, CertificateTemplateField,
+  SiteSetting, AuditLog,
   EventMemory, MemoryPhoto, MemoryVideo,
 } from './types';
 
 export type {
   Profile, Event, EventForm, FormField, FormFieldOption,
   Registration, RegistrationValue, News, NewsCategory,
-  PhotoAlbum, Photo, Video, Certificate, SiteSetting, AuditLog,
+  PhotoAlbum, Photo, Video, Certificate, CertificateTemplate, CertificateTemplateField,
+  SiteSetting, AuditLog,
   EventMemory, MemoryPhoto, MemoryVideo,
 };
 
@@ -127,7 +129,7 @@ export const events = {
   getForm(eventId: string) {
     return apiFetch<{ form: EventForm | null; fields: FormField[] } | null>(`/api/events/${eventId}/form`);
   },
-  saveForm(eventId: string, payload: { title: string; description: string; fields: unknown[] }) {
+  saveForm(eventId: string, payload: { title: string; description: string; name_field_key?: string; fields: unknown[] }) {
     return apiFetch(`/api/events/${eventId}/form`, { method: 'PUT', body: JSON.stringify(payload) });
   },
 };
@@ -143,7 +145,7 @@ export const registrations = {
   getValues(id: string) {
     return apiFetch<{ label: string; value: string }[]>(`/api/registrations/${id}`);
   },
-  submit(payload: { event_id: string; form_id: string; values: { field_id: string; value_text: string }[] }) {
+  submit(payload: { event_id: string; form_id: string; values: { field_id: string; value_text: string; file_url?: string }[] }) {
     return apiFetch<Registration>('/api/registrations', { method: 'POST', body: JSON.stringify(payload) });
   },
   updateStatus(id: string, status: string) {
@@ -350,3 +352,23 @@ export interface PendingReg {
   event_id: string;
   participant_name: string | null;
 }
+
+// ─── certificate templates ────────────────────────────────────────────────────
+export const certificateTemplates = {
+  listAll() {
+    // Admin version — includes inactive templates
+    return apiFetch<CertificateTemplate[]>('/api/certificate-templates?all=1');
+  },
+  getById(id: string) {
+    return apiFetch<{ template: CertificateTemplate; fields: CertificateTemplateField[] }>(`/api/certificate-templates/${id}`);
+  },
+  create(payload: Partial<CertificateTemplate> & { fields?: unknown[] }) {
+    return apiFetch<CertificateTemplate>('/api/certificate-templates', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  update(id: string, payload: Partial<CertificateTemplate> & { fields?: unknown[] }) {
+    return apiFetch<CertificateTemplate>(`/api/certificate-templates/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  },
+  remove(id: string) {
+    return apiFetch<{ success: boolean; message?: string }>(`/api/certificate-templates/${id}`, { method: 'DELETE' });
+  },
+};

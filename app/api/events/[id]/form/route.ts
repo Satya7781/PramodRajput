@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-// PUT /api/events/[id]/form — admin: upsert form + replace fields
+// PUT /api/events/[id]/form — admin: upsert form + update fields without destroying existing registration data
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const authResult = requireAuth(req);
   if (isResponse(authResult)) return authResult;
@@ -40,9 +40,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   try {
     const body = await req.json();
-    const { title, description, fields } = body as {
+    const { title, description, fields, name_field_key } = body as {
       title: string;
       description: string;
+      name_field_key?: string;
       fields: Array<{
         id?: string;
         field_type: string;
@@ -64,42 +65,90 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     if (form) {
       await queryOne(
-        `UPDATE event_forms SET title=$1, description=$2, updated_at=now() WHERE id=$3`,
-        [title, description || null, form.id]
+        `UPDATE event_forms SET title=$1, description=$2, name_field_key=$3, updated_at=now() WHERE id=$4`,
+        [title, description || null, name_field_key || null, form.id]
       );
     } else {
       form = await queryOne<{ id: string }>(
-        `INSERT INTO event_forms (event_id, title, description, is_active)
-         VALUES ($1,$2,$3,true) RETURNING id`,
-        [params.id, title, description || null]
+        `INSERT INTO event_forms (event_id, title, description, name_field_key, is_active)
+         VALUES ($1,$2,$3,$4,true) RETURNING id`,
+        [params.id, title, description || null, name_field_key || null]
       );
     }
 
     if (!form) return err('Failed to upsert form', 500);
 
-    // Delete all existing fields (cascade deletes options)
-    await query(`DELETE FROM form_fields WHERE form_id=$1`, [form.id]);
+    // SAFE upsert: get existing field IDs to detect removals
+    const existingFields = await query<{ id: string; field_key: string }>(
+      `SELECT id, field_key FROM form_fields WHERE form_id=$1`,
+      [form.id]
+    );
+    const existingMap = new Map(existingFields.map((f) => [f.field_key, f.id]));
 
-    // Re-insert fields and options
+    // Track which field_keys we processed this save
+    const processedKeys = new Set<string>();
+
     for (const field of fields ?? []) {
-      const inserted = await queryOne<{ id: string }>(
-        `INSERT INTO form_fields
-           (form_id, field_type, field_key, label, description, placeholder, is_required, sort_order, is_active)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) RETURNING id`,
-        [
-          form.id, field.field_type, field.field_key, field.label,
-          field.description || null, field.placeholder || null,
-          field.is_required, field.sort_order,
-        ]
-      );
-      if (inserted && field.options?.length) {
-        for (let i = 0; i < field.options.length; i++) {
-          const opt = field.options[i];
-          await query(
-            `INSERT INTO form_field_options (field_id, label, value, sort_order) VALUES ($1,$2,$3,$4)`,
-            [inserted.id, opt.label, opt.value, i]
-          );
+      processedKeys.add(field.field_key);
+      const existingId = existingMap.get(field.field_key);
+
+      if (existingId) {
+        // UPDATE existing field — preserves registration_values FK references
+        await query(
+          `UPDATE form_fields SET
+             field_type=$1, label=$2, description=$3, placeholder=$4,
+             is_required=$5, sort_order=$6, is_active=true, updated_at=now()
+           WHERE id=$7`,
+          [
+            field.field_type, field.label,
+            field.description || null, field.placeholder || null,
+            field.is_required, field.sort_order,
+            existingId,
+          ]
+        );
+
+        // Replace options for this field
+        if (field.options !== undefined) {
+          await query(`DELETE FROM form_field_options WHERE field_id=$1`, [existingId]);
+          for (let i = 0; i < field.options.length; i++) {
+            const opt = field.options[i];
+            await query(
+              `INSERT INTO form_field_options (field_id, label, value, sort_order) VALUES ($1,$2,$3,$4)`,
+              [existingId, opt.label, opt.value, i]
+            );
+          }
         }
+      } else {
+        // INSERT new field
+        const inserted = await queryOne<{ id: string }>(
+          `INSERT INTO form_fields
+             (form_id, field_type, field_key, label, description, placeholder, is_required, sort_order, is_active)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) RETURNING id`,
+          [
+            form.id, field.field_type, field.field_key, field.label,
+            field.description || null, field.placeholder || null,
+            field.is_required, field.sort_order,
+          ]
+        );
+        if (inserted && field.options?.length) {
+          for (let i = 0; i < field.options.length; i++) {
+            const opt = field.options[i];
+            await query(
+              `INSERT INTO form_field_options (field_id, label, value, sort_order) VALUES ($1,$2,$3,$4)`,
+              [inserted.id, opt.label, opt.value, i]
+            );
+          }
+        }
+      }
+    }
+
+    // SOFT-delete fields that were removed (set is_active=false) — preserves registration_values
+    for (const [fieldKey, fieldId] of existingMap.entries()) {
+      if (!processedKeys.has(fieldKey)) {
+        await query(
+          `UPDATE form_fields SET is_active=false, updated_at=now() WHERE id=$1`,
+          [fieldId]
+        );
       }
     }
 
@@ -111,13 +160,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
        ) FILTER (WHERE o.id IS NOT NULL) AS form_field_options
        FROM form_fields f
        LEFT JOIN form_field_options o ON o.field_id = f.id
-       WHERE f.form_id=$1
+       WHERE f.form_id=$1 AND f.is_active=true
        GROUP BY f.id
        ORDER BY f.sort_order`,
       [form.id]
     );
 
-    return ok({ form: { id: form.id, title, description }, fields: updatedFields });
+    return ok({ form: { id: form.id, title, description, name_field_key }, fields: updatedFields });
   } catch (e) {
     console.error('PUT /api/events/[id]/form error:', e);
     return err('Internal server error', 500);

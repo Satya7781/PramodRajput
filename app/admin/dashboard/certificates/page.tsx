@@ -172,6 +172,17 @@ export default function CertificatesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {cert.pdf_url && (
+                            <a
+                              href={cert.pdf_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex h-8 items-center justify-center rounded-lg px-2 hover:bg-muted transition-colors text-xs text-primary"
+                              title="Download PDF"
+                            >
+                              PDF
+                            </a>
+                          )}
                           {cert.status === 'valid' ? (
                             <button onClick={() => revokeCert(cert.id)} disabled={revoking === cert.id} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors" title="Revoke">
                               {revoking === cert.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldX className="h-3.5 w-3.5" />}

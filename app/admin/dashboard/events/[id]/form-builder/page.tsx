@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Trash2, Loader2, Save, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, Save, ChevronUp, ChevronDown, X, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
@@ -37,6 +37,7 @@ export default function FormBuilderPage() {
   const [fields, setFields] = useState<LocalField[]>([]);
   const [formTitle, setFormTitle] = useState('');
   const [formDesc, setFormDesc] = useState('');
+  const [nameFieldKey, setNameFieldKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -50,6 +51,7 @@ export default function FormBuilderPage() {
       if (formData && formData.form) {
         setFormTitle(formData.form.title ?? '');
         setFormDesc(formData.form.description ?? '');
+        setNameFieldKey(formData.form.name_field_key ?? '');
         const mapped: LocalField[] = (formData.fields ?? []).map((f) => ({
           id: f.id, field_type: f.field_type, field_key: f.field_key, label: f.label,
           description: f.description ?? '', placeholder: f.placeholder ?? '',
@@ -116,6 +118,7 @@ export default function FormBuilderPage() {
       await eventsApi.saveForm(eventId, {
         title: formTitle.trim(),
         description: formDesc.trim(),
+        name_field_key: nameFieldKey || undefined,
         fields: fields.map((f, i) => ({
           ...f,
           sort_order: i,
@@ -163,6 +166,23 @@ export default function FormBuilderPage() {
             <Label>Description</Label>
             <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Optional instructions for participants..." rows={2} />
           </div>
+          {fields.length > 0 && (
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="flex items-center gap-2">
+                <User className="h-3.5 w-3.5 text-primary" />
+                Name Field for Certificate <span className="text-destructive">*</span>
+              </Label>
+              <Select value={nameFieldKey} onValueChange={setNameFieldKey}>
+                <SelectTrigger><SelectValue placeholder="Select the field that contains the participant's name" /></SelectTrigger>
+                <SelectContent>
+                  {fields.filter(f => f.label.trim()).map((f, i) => (
+                    <SelectItem key={i} value={f.field_key}>{f.label} ({f.field_key})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">This field's value will be used as the participant's name on certificates.</p>
+            </div>
+          )}
         </div>
       </div>
 
