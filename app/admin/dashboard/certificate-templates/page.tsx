@@ -353,8 +353,12 @@ export default function CertificateTemplatesPage() {
 
   const openEdit = async (t: FullTemplate) => {
     try {
-      const full = await tmplApi.getById(t.id);
-      setEditTarget(full as FullTemplate);
+      const res = await tmplApi.getById(t.id);
+      const full: FullTemplate = {
+        ...res.template,
+        certificate_template_fields: res.fields,
+      };
+      setEditTarget(full);
       setShowModal(true);
     } catch {
       toast.error('Failed to load template details.');
