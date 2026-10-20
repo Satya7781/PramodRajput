@@ -23,12 +23,22 @@ interface GalleryEventRecord {
   year: number;
 }
 
+function normalizeSlug(value: string): string {
+  let slug = value;
+  try { slug = decodeURIComponent(slug); } catch { /* keep the original value */ }
+  if (slug.includes('%')) {
+    try { slug = decodeURIComponent(slug); } catch { /* keep the first decode */ }
+  }
+  return slug;
+}
+
 async function getContent(slug: string): Promise<{ title: string; description: string | null; image: string | null; path: string; publishedTime?: string | null } | null> {
+  const normalizedSlug = normalizeSlug(slug);
   const event = await queryOne<EventRecord>(
     `SELECT title, slug, short_description, description, banner_url, start_date, venue, status
      FROM events
      WHERE slug = $1 AND status IN ('published', 'registration_open', 'registration_closed', 'completed')`,
-    [slug]
+    [normalizedSlug]
   );
 
   if (event) {
@@ -43,7 +53,7 @@ async function getContent(slug: string): Promise<{ title: string; description: s
 
   const galleryEvent = await queryOne<GalleryEventRecord>(
     `SELECT name, slug, description, cover_url, year FROM gallery_events WHERE slug = $1`,
-    [slug]
+    [normalizedSlug]
   );
 
   if (!galleryEvent) return null;
