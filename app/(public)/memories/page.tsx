@@ -34,17 +34,22 @@ export default function MemoriesPage() {
 
   const byYear: Record<string, EventMemory[]> = {};
   for (const m of memories) {
-    const year = m.event_date ? new Date(m.event_date).getFullYear().toString() : '—';
+    const year = m.event_date ? new Date(m.event_date).getFullYear().toString() : '0';
     if (!byYear[year]) byYear[year] = [];
     byYear[year].push(m);
   }
-  const years = Object.keys(byYear).sort((a, b) => Number(b) - Number(a));
+  // Sort years descending numerically; entries with no date (key '0') go last
+  const years = Object.keys(byYear).sort((a, b) => {
+    if (a === '0') return 1;
+    if (b === '0') return -1;
+    return Number(b) - Number(a);
+  });
 
   return (
     <div className="flex flex-col">
 
       {/* Hero */}
-      <section className="py-14 sm:py-20 bg-gradient-to-br from-secondary/8 via-background to-primary/5">
+      <section className="py-14 sm:py-20 bg-gradient-to-br from-secondary/10 via-background to-primary/5">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="max-w-3xl animate-slide-up">
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-xs sm:text-sm font-bold text-primary mb-4">

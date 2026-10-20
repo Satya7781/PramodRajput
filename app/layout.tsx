@@ -9,10 +9,11 @@ const inter = Inter({ subsets: ['latin'] });
 const SITE_NAME    = process.env.NEXT_PUBLIC_SITE_NAME    ?? 'Pramod Rajput';
 const SITE_TAGLINE = process.env.NEXT_PUBLIC_SITE_TAGLINE ?? 'Serving People, Building Tomorrow';
 const SITE_DESC    = process.env.NEXT_PUBLIC_SITE_DESC    ?? `Official digital platform of ${SITE_NAME} — public servant, community leader, and advocate for grassroots development.`;
-const OG_IMAGE     = process.env.NEXT_PUBLIC_OG_IMAGE     ?? 'https://www.pramodrajput.co.in/og-image.png?v=2';
+const OG_IMAGE     = process.env.NEXT_PUBLIC_OG_IMAGE     ?? 'https://www.npramodrajput.co.in/og-image.png?v=2';
 const FAVICON_URL  = process.env.NEXT_PUBLIC_FAVICON_URL  ?? '/favicon.png';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   title:       `${SITE_NAME} | ${SITE_TAGLINE}`,
   description: SITE_DESC,
   icons: {
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     title:       `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: SITE_DESC,
-    images:      [{ url: OG_IMAGE, width: 720, height: 900, alt: SITE_NAME }],
+    images:      [{ url: OG_IMAGE, width: 1200, height: 900, alt: SITE_NAME }],
     siteName:    SITE_NAME,
     type:        'website',
   },
@@ -39,7 +40,7 @@ export const metadata: Metadata = {
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="hi">
       <body className={inter.className}>
         <AuthProvider>
           {children}

@@ -461,7 +461,7 @@ export default function MemoriesAdminPage() {
         <div className="rounded-xl border border-border bg-card p-16 text-center text-muted-foreground">
           <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-30" />
           <p className="font-medium mb-1">No memories yet</p>
-          <p className="text-sm">Start documenting past events by clicking "Add Memory".</p>
+          <p className="text-sm">Start documenting past events by clicking &quot;Add Memory&quot;.</p>
         </div>
       ) : (
         <div className="space-y-3">

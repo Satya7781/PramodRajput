@@ -22,8 +22,8 @@ export default function HomePage() {
       fetch('/api/events?limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/news?limit=3').then(r => r.ok ? r.json() : []),
     ]).then(([ev, nw]) => {
-      setEvents(Array.isArray(ev.status === 'fulfilled' ? ev.value : []) ? (ev.status === 'fulfilled' ? ev.value : []) : []);
-      setNews(Array.isArray(nw.status === 'fulfilled' ? nw.value : []) ? (nw.status === 'fulfilled' ? nw.value : []) : []);
+      setEvents(ev.status === 'fulfilled' && Array.isArray(ev.value) ? ev.value : []);
+      setNews(nw.status === 'fulfilled' && Array.isArray(nw.value) ? nw.value : []);
       setReady(true);
     });
   }, []);
@@ -88,7 +88,7 @@ export default function HomePage() {
 
             <div className="flex flex-col xs:flex-row flex-wrap gap-3 animate-slide-up" style={{ animationDelay: '160ms' }}>
               <Link
-                href="/about"
+                href="/journey"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/40 hover:bg-primary/90 active:scale-95 transition-all"
               >
                 {t('home', 'heroBtn1')} <ArrowRight className="h-4 w-4" />
@@ -172,7 +172,7 @@ export default function HomePage() {
                 className="group rounded-2xl border border-border bg-card p-6 sm:p-8 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1 transition-all duration-200"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-primary/10 group-hover:bg-primary transition-colors duration-200 mb-5">
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-primary/10 group-hover:bg-primary transition-colors duration-200 mb-5">
                   <item.icon className="h-6 w-6 sm:h-7 sm:w-7 text-primary group-hover:text-primary-foreground transition-colors duration-200" />
                 </div>
                 <h3 className="text-base sm:text-lg font-bold mb-2">{item.title}</h3>

@@ -12,6 +12,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.pexels.com' },
       { protocol: 'https', hostname: 'img.youtube.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
   },
   // Allow serving uploaded files from /public/uploads
@@ -24,6 +25,13 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  webpack(config, { isServer }) {
+    // Cloudinary SDK uses Node built-ins — mark as external for server bundles
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'cloudinary'];
+    }
+    return config;
   },
 };
 

@@ -173,14 +173,14 @@ export default function FormBuilderPage() {
                 Name Field for Certificate <span className="text-destructive">*</span>
               </Label>
               <Select value={nameFieldKey} onValueChange={setNameFieldKey}>
-                <SelectTrigger><SelectValue placeholder="Select the field that contains the participant's name" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select the field that contains the participant&apos;s name" /></SelectTrigger>
                 <SelectContent>
                   {fields.filter(f => f.label.trim()).map((f, i) => (
                     <SelectItem key={i} value={f.field_key}>{f.label} ({f.field_key})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">This field's value will be used as the participant's name on certificates.</p>
+              <p className="text-xs text-muted-foreground">This field&apos;s value will be used as the participant&apos;s name on certificates.</p>
             </div>
           )}
         </div>
@@ -195,7 +195,7 @@ export default function FormBuilderPage() {
 
         {fields.length === 0 && (
           <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-muted-foreground text-sm">
-            No fields yet. Click "Add Field" to start building the form.
+            No fields yet. Click &quot;Add Field&quot; to start building the form.
           </div>
         )}
 

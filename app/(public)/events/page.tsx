@@ -30,7 +30,7 @@ interface GalleryEvent {
   video_count: string;
 }
 
-const ALL_YEARS = Array.from({ length: 2026 - 2009 + 1 }, (_, i) => 2026 - i);
+const ALL_YEARS = Array.from({ length: new Date().getFullYear() - 2009 + 1 }, (_, i) => new Date().getFullYear() - i);
 
 type Tab = 'live' | 'archive';
 
@@ -315,7 +315,7 @@ export default function EventsPage() {
 }
 
 /* ─── Live Event Card ─────────────────────────────────────────── */
-function EventCard({ event, lang, t, index }: { event: Event; lang: string; t: Function; index: number }) {
+function EventCard({ event, lang, t, index }: { event: Event; lang: string; t: ReturnType<typeof useLanguage>['t']; index: number }) {
   const badge = statusBadge(event, lang);
   const title = (lang === 'en' && (event as any).title_en) ? (event as any).title_en : event.title;
   const now = new Date();

@@ -5,6 +5,15 @@ import { ContactForm } from './contact-form';
 import { useLanguage } from '@/lib/i18n';
 import { useSiteSettings } from '@/lib/site-settings-context';
 
+/** Split a translation string like "Monday — Friday: 9:00 AM — 6:00 PM"
+ *  into { day: "Monday — Friday", time: "9:00 AM — 6:00 PM" }
+ *  by splitting only on the first colon. */
+function parseOfficeHour(raw: string): { day: string; time: string } {
+  const idx = raw.indexOf(':');
+  if (idx === -1) return { day: raw, time: '' };
+  return { day: raw.slice(0, idx).trim(), time: raw.slice(idx + 1).trim() };
+}
+
 export default function ContactPage() {
   const { t } = useLanguage();
   const { settings } = useSiteSettings();
@@ -24,10 +33,14 @@ export default function ContactPage() {
   ].filter(Boolean) as { icon: React.ElementType; label: string; value: string; href: string }[];
 
   const socials = [
-    { icon: Facebook,  label: 'Facebook',   href: fbUrl, color: 'hover:bg-blue-600 hover:border-blue-600' },
+    { icon: Facebook,  label: 'Facebook',    href: fbUrl, color: 'hover:bg-blue-600 hover:border-blue-600' },
     { icon: Twitter,   label: 'Twitter / X', href: twUrl, color: 'hover:bg-sky-500 hover:border-sky-500' },
     { icon: Instagram, label: 'Instagram',   href: igUrl, color: 'hover:bg-pink-600 hover:border-pink-600' },
   ];
+
+  const monFri = parseOfficeHour(t('contact', 'monFri'));
+  const sat    = parseOfficeHour(t('contact', 'sat'));
+  const sun    = parseOfficeHour(t('contact', 'sun'));
 
   return (
     <div className="flex flex-col">
@@ -62,7 +75,7 @@ export default function ContactPage() {
                         className="flex items-center gap-3 sm:gap-4 rounded-2xl border border-border bg-card p-3.5 sm:p-4 hover:border-primary/30 hover:shadow-md transition-all group"
                       >
                         <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary transition-colors shrink-0">
-                          <item.icon className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary group-hover:text-primary-foreground transition-colors" />
+                          <item.icon className="h-5 w-5 text-primary group-hover:text-primary-foreground transition-colors" aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">{item.label}</p>
@@ -73,7 +86,7 @@ export default function ContactPage() {
                     {address && (
                       <div className="flex items-start gap-3 sm:gap-4 rounded-2xl border border-border bg-card p-3.5 sm:p-4">
                         <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-primary/10 shrink-0 mt-0.5">
-                          <MapPin className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary" />
+                          <MapPin className="h-5 w-5 text-primary" aria-hidden="true" />
                         </div>
                         <div>
                           <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">{t('contact', 'addressLabel')}</p>
@@ -88,23 +101,17 @@ export default function ContactPage() {
               {/* Office hours */}
               <div className="rounded-2xl bg-muted/50 border border-border p-4 sm:p-5">
                 <div className="flex items-center gap-2.5 mb-3">
-                  <Clock className="h-4.5 w-4.5 text-primary" />
+                  <Clock className="h-5 w-5 text-primary" aria-hidden="true" />
                   <h3 className="font-bold text-sm sm:text-base">{t('contact', 'officeHours')}</h3>
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground space-y-1.5">
-                  <div className="flex justify-between">
-                    <span>{t('contact', 'monFri').split(':')[0]}</span>
-                    <span className="font-medium text-foreground">{t('contact', 'monFri').split(':')[1] ?? '10:00 – 18:00'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('contact', 'sat').split(':')[0]}</span>
-                    <span className="font-medium text-foreground">{t('contact', 'sat').split(':')[1] ?? '10:00 – 14:00'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t('contact', 'sun').split(':')[0]}</span>
-                    <span className="font-medium text-foreground">{t('contact', 'sun').split(':')[1] ?? 'Closed'}</span>
-                  </div>
-                </div>
+                <dl className="text-xs sm:text-sm text-muted-foreground space-y-1.5">
+                  {[monFri, sat, sun].map(({ day, time }) => (
+                    <div key={day} className="flex justify-between gap-4">
+                      <dt>{day}</dt>
+                      <dd className="font-medium text-foreground text-right">{time}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
 
               {/* Social links */}
@@ -117,10 +124,10 @@ export default function ContactPage() {
                       href={s.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={s.label}
+                      aria-label={`Follow on ${s.label}`}
                       className={`flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:text-primary-foreground active:scale-95 transition-all ${s.color}`}
                     >
-                      <s.icon className="h-4.5 w-4.5" />
+                      <s.icon className="h-5 w-5" aria-hidden="true" />
                     </a>
                   ))}
                 </div>

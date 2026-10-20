@@ -51,7 +51,7 @@ export default function CertificatesPage() {
       }
       if (tmpls.length > 0) setSelectedTemplate(tmpls[0].id);
     }).catch(() => {});
-  }, []);
+  }, [eventParam]);
 
   // Auto-select the template assigned to the chosen event
   useEffect(() => {

@@ -50,7 +50,7 @@
     "autoprefixer": "10.4.15",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.0",
-    "cloudinary": "2.11.0",
+    "cloudinary": "^2.5.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",

@@ -81,11 +81,13 @@ export default function NewsPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('news', 'search')}
+                aria-label={t('news', 'search')}
                 className="w-full rounded-xl border border-border bg-card pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
+                  aria-label="Clear search"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4" />

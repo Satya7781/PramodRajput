@@ -334,6 +334,8 @@ export const translations = {
     sendAnother:     { hi: 'और संदेश भेजें',                   en: 'Send Another Message' },
     fillRequired:    { hi: 'कृपया सभी आवश्यक फ़ील्ड भरें।',    en: 'Please fill in all required fields.' },
     sentSuccess:     { hi: 'संदेश भेज दिया गया! हम जल्द ही संपर्क करेंगे।', en: 'Message sent! We will get back to you soon.' },
+    invalidEmail:    { hi: 'कृपया एक वैध ईमेल पता दर्ज करें।', en: 'Please enter a valid email address.' },
+    messageTooShort: { hi: 'संदेश कम से कम 10 अक्षर का होना चाहिए।', en: 'Message must be at least 10 characters.' },
   },
   certificate: {
     verifyTag:    { hi: 'प्रमाण पत्र सत्यापन',                 en: 'Certificate Verification' },

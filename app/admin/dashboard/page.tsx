@@ -59,7 +59,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Welcome back, {user?.full_name?.split(' ')[0] || 'Admin'}</h1>
-        <p className="text-muted-foreground text-sm mt-1">Here's an overview of your platform.</p>
+        <p className="text-muted-foreground text-sm mt-1">Here&apos;s an overview of your platform.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

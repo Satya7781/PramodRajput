@@ -9,16 +9,15 @@ export function SiteFooter() {
   const { t } = useLanguage();
   const { settings } = useSiteSettings();
 
-  const siteName      = settings.site_name      ?? 'Pramod Rajput';
-  const email         = settings.contact_email  ?? '';
-  const phone         = settings.contact_phone  ?? '';
-  const phoneAlt      = settings.contact_phone_secondary ?? '';
-  const address       = settings.contact_address ?? '';
-  const fbUrl = settings.facebook  ?? 'https://www.facebook.com/pramodrajput.rajput.9/';
-  const twUrl = settings.twitter   ?? 'https://x.com/pramodrajput07';
-  const igUrl = settings.instagram ?? 'https://www.instagram.com/pramodrajput0214/?hl=en';
+  const siteName = settings.site_name      ?? 'Pramod Rajput';
+  const email    = settings.contact_email  ?? '';
+  const phone    = settings.contact_phone  ?? '';
+  const phoneAlt = settings.contact_phone_secondary ?? '';
+  const address  = settings.contact_address ?? '';
+  const fbUrl    = settings.facebook  ?? 'https://www.facebook.com/pramodrajput.rajput.9/';
+  const twUrl    = settings.twitter   ?? 'https://x.com/pramodrajput07';
+  const igUrl    = settings.instagram ?? 'https://www.instagram.com/pramodrajput0214/?hl=en';
 
-  // Derive initials from site name for the logo badge
   const initials = siteName
     .split(' ')
     .map((w) => w[0])
@@ -33,21 +32,21 @@ export function SiteFooter() {
 
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
+            <Link href="/" className="flex items-center gap-2.5 mb-3 group w-fit" aria-label={`${siteName} — Home`}>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg group-hover:scale-105 transition-transform">
                 {initials}
               </div>
               <span className="text-base font-bold tracking-tight">{siteName}</span>
-            </div>
+            </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">{t('footer', 'tagline')}</p>
             <div className="flex items-center gap-3 mt-4">
-              <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Facebook">
+              <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded" aria-label="Facebook">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href={twUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Twitter / X">
+              <a href={twUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded" aria-label="Twitter / X">
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href={igUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Instagram">
+              <a href={igUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded" aria-label="Instagram">
                 <Instagram className="h-5 w-5" />
               </a>
             </div>
@@ -57,11 +56,11 @@ export function SiteFooter() {
           <div>
             <h3 className="text-sm font-semibold mb-3">{t('footer', 'quickLinks')}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/about"    className="hover:text-primary transition-colors">{t('nav', 'about')}</Link></li>
-              <li><Link href="/journey"  className="hover:text-primary transition-colors">{t('nav', 'journey')}</Link></li>
-              <li><Link href="/events"   className="hover:text-primary transition-colors">{t('nav', 'events')}</Link></li>
-              <li><Link href="/memories" className="hover:text-primary transition-colors">{t('nav', 'memories')}</Link></li>
-              <li><Link href="/news"     className="hover:text-primary transition-colors">{t('nav', 'news')}</Link></li>
+              <li><Link href="/about"        className="hover:text-primary transition-colors">{t('nav', 'about')}</Link></li>
+              <li><Link href="/journey"      className="hover:text-primary transition-colors">{t('nav', 'journey')}</Link></li>
+              <li><Link href="/achievements" className="hover:text-primary transition-colors">{t('nav', 'achievements')}</Link></li>
+              <li><Link href="/memories"     className="hover:text-primary transition-colors">{t('nav', 'memories')}</Link></li>
+              <li><Link href="/news"         className="hover:text-primary transition-colors">{t('nav', 'news')}</Link></li>
             </ul>
           </div>
 
@@ -81,25 +80,25 @@ export function SiteFooter() {
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               {email && (
                 <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-primary shrink-0" />
+                  <Mail className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                   <a href={`mailto:${email}`} className="break-all hover:text-primary transition-colors">{email}</a>
                 </li>
               )}
               {phone && (
                 <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-primary shrink-0" />
+                  <Phone className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                   <a href={`tel:${phone.replace(/\s/g, '')}`} className="hover:text-primary transition-colors">{phone}</a>
                 </li>
               )}
               {phoneAlt && (
                 <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-primary shrink-0" />
+                  <Phone className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                   <a href={`tel:${phoneAlt.replace(/\s/g, '')}`} className="hover:text-primary transition-colors">{phoneAlt}</a>
                 </li>
               )}
               {address && (
                 <li className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
                   <span>{address}</span>
                 </li>
               )}
@@ -108,7 +107,6 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-border space-y-4">
-
           {/* Developer credit */}
           <div className="rounded-xl bg-muted/40 border border-border px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -116,16 +114,18 @@ export function SiteFooter() {
                 {t('footer', 'devLabel')}
               </p>
               <p className="text-sm font-bold text-foreground">Satyanarayan Chouhan</p>
-              <a
-                href="tel:9302044230"
-                className="text-sm text-primary hover:underline font-medium"
-              >
-                +91 93020 44230
-              </a>
+              <div className="flex flex-col items-start gap-0.5">
+                <a href="tel:7746932470" className="text-sm text-primary hover:underline font-medium">
+                  +91 7746932470
+                </a>
+                <a href="tel:9302044230" className="text-sm text-primary hover:underline font-medium">
+                  +91 93020 44230
+                </a>
+              </div>
             </div>
             <div className="sm:text-right max-w-xs">
               <p className="text-xs text-muted-foreground italic leading-relaxed">
-                "{t('footer', 'devQuote')}"
+                &quot;{t('footer', 'devQuote')}&quot;
               </p>
             </div>
           </div>
