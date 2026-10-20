@@ -10,6 +10,7 @@ import {
 import { useLanguage } from '@/lib/i18n';
 import { formatDate } from '@/lib/date-utils';
 import type { Event } from '@/lib/types';
+import { ShareButton } from '@/components/site/share-button';
 
 /* ── Gallery types ── */
 interface GalleryEvent {
@@ -108,6 +109,7 @@ export default function EventDetailPage() {
     const ev    = liveEvent;
     const title = (lang === 'en' && (ev as any).title_en) ? (ev as any).title_en : ev.title;
     const desc  = (lang === 'en' && (ev as any).description_en) ? (ev as any).description_en : ev.description;
+    const eventImage = ev.banner_url || (ev as Event & { cover_image_url?: string | null }).cover_image_url;
     const now   = new Date();
 
     const isOngoing = ev.start_date && ev.end_date &&
@@ -124,15 +126,15 @@ export default function EventDetailPage() {
     return (
       <div className="flex flex-col">
         {/* Hero */}
-        <section className={`relative overflow-hidden ${(ev as any).cover_image_url ? 'h-56 sm:h-80' : 'py-14 sm:py-20 bg-secondary/5'}`}>
-          {(ev as any).cover_image_url && (
+        <section className={`relative overflow-hidden ${eventImage ? 'h-56 sm:h-80' : 'py-14 sm:py-20 bg-secondary/5'}`}>
+          {eventImage && (
             <>
-              <img src={(ev as any).cover_image_url} alt={title} className="absolute inset-0 h-full w-full object-cover" />
+              <img src={eventImage} alt={title} className="absolute inset-0 h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
             </>
           )}
-          <div className={`container mx-auto px-4 lg:px-8 ${(ev as any).cover_image_url ? 'relative z-10 h-full flex flex-col justify-end pb-8 sm:pb-10' : ''}`}>
-            <Link href="/events" className={`inline-flex items-center gap-1.5 text-sm mb-3 transition-colors ${(ev as any).cover_image_url ? 'text-white/70 hover:text-white' : 'text-muted-foreground hover:text-primary'}`}>
+          <div className={`container mx-auto px-4 lg:px-8 ${eventImage ? 'relative z-10 h-full flex flex-col justify-end pb-8 sm:pb-10' : ''}`}>
+            <Link href="/events" className={`inline-flex items-center gap-1.5 text-sm mb-3 transition-colors ${eventImage ? 'text-white/70 hover:text-white' : 'text-muted-foreground hover:text-primary'}`}>
               <ArrowLeft className="h-4 w-4" />{lang === 'hi' ? 'सभी कार्यक्रम' : 'All Events'}
             </Link>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -153,13 +155,21 @@ export default function EventDetailPage() {
                 </span>
               )}
             </div>
-            <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold text-balance ${(ev as any).cover_image_url ? 'text-white' : ''}`}>
+            <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold text-balance ${eventImage ? 'text-white' : ''}`}>
               {title}
             </h1>
           </div>
         </section>
 
         <div className="container mx-auto px-4 lg:px-8 max-w-4xl py-10 sm:py-14">
+          <div className="flex justify-end mb-6">
+            <ShareButton
+              title={title}
+              text={desc}
+              label={lang === 'hi' ? 'साझा करें' : 'Share event'}
+              successMessage={lang === 'hi' ? 'लिंक कॉपी हो गया' : 'Link copied'}
+            />
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
             {/* Main content */}

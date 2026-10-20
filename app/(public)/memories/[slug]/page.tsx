@@ -8,6 +8,7 @@ import type { EventMemory, MemoryPhoto, MemoryVideo } from '@/lib/types';
 import { useLanguage } from '@/lib/i18n';
 import { formatDate } from '@/lib/date-utils';
 import { MemoryPhotoGrid } from './memory-photo-grid';
+import { ShareButton } from '@/components/site/share-button';
 
 interface FullMemory extends EventMemory {
   memory_photos: MemoryPhoto[];
@@ -95,6 +96,15 @@ export default function MemoryDetailPage() {
               )}
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white text-balance leading-tight">{title}</h1>
+            <div className="mt-4">
+              <ShareButton
+                title={title}
+                text={description}
+                label={lang === 'hi' ? 'साझा करें' : 'Share memory'}
+                successMessage={lang === 'hi' ? 'लिंक कॉपी हो गया' : 'Link copied'}
+                className="border-white/30 bg-black/20 text-white hover:bg-black/40"
+              />
+            </div>
           </div>
         </div>
       </section>

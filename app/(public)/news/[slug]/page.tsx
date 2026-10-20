@@ -7,6 +7,7 @@ import { Calendar, ArrowLeft, Newspaper, Loader2, Play, ImageIcon, X, ChevronLef
 import type { News } from '@/lib/types';
 import { useLanguage } from '@/lib/i18n';
 import { formatDate } from '@/lib/date-utils';
+import { ShareButton } from '@/components/site/share-button';
 
 interface NewsMedia { id: string; media_type: 'photo'|'video'|'link'; url: string; caption: string|null; }
 
@@ -118,6 +119,15 @@ export default function NewsArticlePage() {
 
       <section className="py-12 sm:py-16">
         <div className="container mx-auto px-4 lg:px-8 max-w-4xl space-y-10">
+
+          <div className="flex justify-end">
+            <ShareButton
+              title={title}
+              text={excerpt}
+              label={lang === 'hi' ? 'साझा करें' : 'Share article'}
+              successMessage={lang === 'hi' ? 'लिंक कॉपी हो गया' : 'Link copied'}
+            />
+          </div>
 
           {/* Article text */}
           <div className="max-w-3xl">
