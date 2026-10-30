@@ -44,14 +44,15 @@ export default function RegistrationsPage() {
   const fetchRegistrations = useCallback(async () => {
     setLoading(true);
     try {
-      const params: { event_id?: string; status?: string } = {};
+      const params: { event_id?: string; status?: string; search?: string } = {};
       if (selectedEvent !== 'all') params.event_id = selectedEvent;
       if (statusFilter !== 'all') params.status = statusFilter;
+      if (search.trim()) params.search = search.trim();
       const data = await regsApi.list(params);
       setRegList(data as RegistrationWithDetails[]);
     } catch { toast.error('Failed to load registrations.'); }
     finally { setLoading(false); }
-  }, [selectedEvent, statusFilter]);
+  }, [selectedEvent, statusFilter, search]);
 
   useEffect(() => { fetchRegistrations(); }, [fetchRegistrations]);
 
@@ -100,7 +101,7 @@ export default function RegistrationsPage() {
     }
   };
 
-  const filtered = regList.filter((r) => !search || r.registration_number.toLowerCase().includes(search.toLowerCase()));
+  const filtered = regList;
 
   const exportCSV = async () => {
     // Collect all registration details including form values
@@ -169,7 +170,7 @@ export default function RegistrationsPage() {
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
-        <Input placeholder="Search by registration #..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+        <Input placeholder="Search by any participant detail..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
       </div>
 
       <div className="flex flex-wrap gap-3 text-sm">

@@ -188,10 +188,11 @@ export const events = {
 
 // ─── registrations ────────────────────────────────────────────────────────────
 export const registrations = {
-  list(params: { event_id?: string; status?: string } = {}) {
+  list(params: { event_id?: string; status?: string; search?: string } = {}) {
     const q = new URLSearchParams();
     if (params.event_id) q.set('event_id', params.event_id);
     if (params.status) q.set('status', params.status);
+    if (params.search) q.set('search', params.search);
     return apiFetch<Registration[]>(`/api/registrations?${q}`);
   },
   getValues(id: string) {

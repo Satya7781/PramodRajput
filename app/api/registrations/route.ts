@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('event_id');
     const status = searchParams.get('status');
+    const search = searchParams.get('search')?.trim();
 
     let sql = `
       SELECT r.*, e.title as event_title
@@ -23,6 +24,19 @@ export async function GET(req: NextRequest) {
 
     if (eventId) { sql += ` AND r.event_id=$${idx++}`; params.push(eventId); }
     if (status) { sql += ` AND r.status=$${idx++}`; params.push(status); }
+    if (search) {
+      sql += ` AND (
+        r.registration_number ILIKE $${idx}
+        OR EXISTS (
+          SELECT 1
+          FROM registration_values rv
+          WHERE rv.registration_id = r.id
+            AND COALESCE(rv.value_text, rv.file_url, '') ILIKE $${idx}
+        )
+      )`;
+      params.push(`%${search}%`);
+      idx++;
+    }
 
     sql += ` ORDER BY r.submitted_at DESC`;
 
