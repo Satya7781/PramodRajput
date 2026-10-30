@@ -97,7 +97,53 @@ export const auth = {
 };
 
 // ─── file upload ──────────────────────────────────────────────────────────────
+// Uses direct-to-Cloudinary upload via a server-signed token to bypass
+// Vercel's 4.5 MB body limit. Falls back to local /api/upload for small
+// files when Cloudinary env vars are not configured on the server.
 export async function uploadFile(file: File): Promise<string> {
+  const token = getAuthToken() ?? '';
+
+  // Step 1 — try to get a Cloudinary signed token
+  const sigRes = await fetch('/api/upload-signature', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ folder: 'media' }),
+  });
+
+  if (sigRes.ok) {
+    // Step 2 — upload directly to Cloudinary (no size limit through Vercel)
+    const { timestamp, signature, apiKey, cloudName } = await sigRes.json();
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('api_key', apiKey);
+    formData.append('timestamp', String(timestamp));
+    formData.append('signature', signature);
+    formData.append('folder', 'media');
+
+    const uploadRes = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+      { method: 'POST', body: formData }
+    );
+
+    if (!uploadRes.ok) {
+      const body = await uploadRes.json().catch(() => ({}));
+      throw new Error(body.error?.message ?? 'Cloudinary upload failed');
+    }
+
+    const data = await uploadRes.json();
+    return data.secure_url as string;
+  }
+
+  // Fallback — local /api/upload (works for files < 4 MB only)
+  if (file.size > 4 * 1024 * 1024) {
+    throw new Error(
+      'File is too large for upload. Please configure Cloudinary environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) on the server to upload large files.'
+    );
+  }
+
   const formData = new FormData();
   formData.append('file', file);
   const result = await apiFetch<{ url: string }>('/api/upload', {
