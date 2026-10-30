@@ -195,7 +195,12 @@ export const registrations = {
     return apiFetch<Registration[]>(`/api/registrations?${q}`);
   },
   getValues(id: string) {
-    return apiFetch<{ label: string; value: string }[]>(`/api/registrations/${id}`);
+    return apiFetch<{ field_id: string; label: string; value: string; field_type?: string }[]>(`/api/registrations/${id}`);
+  },
+  updateValues(id: string, values: { field_id: string; value: string }[]) {
+    return apiFetch<{ success: boolean }>(`/api/registrations/${id}`, {
+      method: 'PUT', body: JSON.stringify({ values }),
+    });
   },
   submit(payload: { event_id: string; form_id: string; values: { field_id: string; value_text: string; file_url?: string }[] }) {
     return apiFetch<Registration>('/api/registrations', { method: 'POST', body: JSON.stringify(payload) });

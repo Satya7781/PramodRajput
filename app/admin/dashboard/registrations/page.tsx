@@ -8,13 +8,13 @@ import type { Event, Registration } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, XCircle, Clock, Eye, Loader2, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Eye, Loader2, ChevronDown, ChevronUp, Download, Pencil, Save, X } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
 interface RegistrationWithDetails extends Registration {
   event_title?: string;
-  values?: { label: string; value: string }[];
+  values?: { field_id: string; label: string; value: string; field_type?: string }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -34,6 +34,8 @@ export default function RegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedValues, setEditedValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     eventsApi.list({ admin: true }).then(setEventList).catch(() => {});
@@ -71,6 +73,31 @@ export default function RegistrationsPage() {
       fetchRegistrations();
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed to update status.'); }
     finally { setActionLoading(null); }
+  };
+
+  const startEditing = (reg: RegistrationWithDetails) => {
+    if (!reg.values) return;
+    setEditingId(reg.id);
+    setEditedValues(Object.fromEntries(reg.values.map((value) => [value.field_id, value.value])));
+  };
+
+  const saveDetails = async (reg: RegistrationWithDetails) => {
+    if (!reg.values) return;
+    setActionLoading(reg.id + 'details');
+    try {
+      await regsApi.updateValues(
+        reg.id,
+        reg.values.map((value) => ({ field_id: value.field_id, value: editedValues[value.field_id] ?? '' }))
+      );
+      const values = reg.values.map((value) => ({ ...value, value: editedValues[value.field_id] ?? '' }));
+      setRegList((prev) => prev.map((item) => item.id === reg.id ? { ...item, values } : item));
+      setEditingId(null);
+      toast.success('Participant details updated.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update participant details.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const filtered = regList.filter((r) => !search || r.registration_number.toLowerCase().includes(search.toLowerCase()));
@@ -209,14 +236,41 @@ export default function RegistrationsPage() {
                       <tr className="bg-muted/20">
                         <td colSpan={5} className="px-6 py-4">
                           {reg.values ? (
+                            <>
+                            <div className="flex justify-end gap-2 mb-3">
+                              {editingId === reg.id ? (
+                                <>
+                                  <Button variant="outline" size="sm" onClick={() => setEditingId(null)} disabled={actionLoading === reg.id + 'details'}>
+                                    <X className="h-3.5 w-3.5 mr-1" />Cancel
+                                  </Button>
+                                  <Button size="sm" onClick={() => saveDetails(reg)} disabled={actionLoading === reg.id + 'details'}>
+                                    {actionLoading === reg.id + 'details' ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                                    Save
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button variant="outline" size="sm" onClick={() => startEditing(reg)}>
+                                  <Pencil className="h-3.5 w-3.5 mr-1" />Edit Details
+                                </Button>
+                              )}
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                               {reg.values.map((v, i) => (
                                 <div key={i} className="rounded-lg bg-card border border-border p-3">
                                   <p className="text-xs text-muted-foreground mb-0.5">{v.label}</p>
-                                  <p className="text-sm font-medium break-all">{v.value}</p>
+                                  {editingId === reg.id ? (
+                                    <Input
+                                      value={editedValues[v.field_id] ?? ''}
+                                      onChange={(event) => setEditedValues((current) => ({ ...current, [v.field_id]: event.target.value }))}
+                                      className="h-8 text-sm"
+                                    />
+                                  ) : (
+                                    <p className="text-sm font-medium break-all">{v.value}</p>
+                                  )}
                                 </div>
                               ))}
                             </div>
+                            </>
                           ) : (
                             <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Loading details...</div>
                           )}
