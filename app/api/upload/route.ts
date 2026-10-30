@@ -1,13 +1,16 @@
 import { NextRequest } from 'next/server';
 import { ok, err, requireEditor, isResponse } from '@/lib/api-helpers';
-import cloudinary from '@/lib/cloudinary';
+
+// POST /api/upload — legacy local file upload fallback
+// The primary upload path is direct-to-Cloudinary via /api/upload-signature.
+// This route handles small uploads (< 4 MB) for environments where
+// Cloudinary env vars are not configured, saving to /public/uploads/.
 
 const ALLOWED_MIME = [
   'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
   'image/gif', 'image/svg+xml',
-  'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
 ];
-const MAX_SIZE = 100 * 1024 * 1024; // 100 MB (Cloudinary free hard cap)
+const MAX_SIZE = 4 * 1024 * 1024; // 4 MB — Vercel body limit safe zone
 
 export async function POST(req: NextRequest) {
   const authResult = requireEditor(req);
@@ -22,38 +25,26 @@ export async function POST(req: NextRequest) {
       return err(`File type not allowed: ${file.type}`);
     }
     if (file.size > MAX_SIZE) {
-      return err('File exceeds 100 MB limit');
+      return err('File exceeds 4 MB limit. Please use the direct upload method for larger files.', 413);
     }
 
-    // Convert File → base64 data URI for Cloudinary SDK upload
-    const bytes  = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString('base64');
-    const dataUri = `data:${file.type};base64,${base64}`;
+    const { writeFile, mkdir } = await import('fs/promises');
+    const { join, extname } = await import('path');
+    const { randomBytes } = await import('crypto');
 
-    const isVideo     = file.type.startsWith('video/');
-    const resourceType: 'image' | 'video' | 'auto' = isVideo ? 'video' : 'image';
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    const result = await cloudinary.uploader.upload(dataUri, {
-      folder:        'media',
-      resource_type: resourceType,
-      // Auto quality + format on delivery — saves bandwidth credits
-      transformation: isVideo
-        ? [{ quality: 'auto' }]
-        : [{ quality: 'auto', fetch_format: 'auto' }],
-    });
+    const ext      = extname(file.name) || '.jpg';
+    const filename = `${randomBytes(16).toString('hex')}${ext}`;
 
-    return ok({
-      url:          result.secure_url,
-      publicId:     result.public_id,
-      resourceType: result.resource_type,
-      width:        result.width,
-      height:       result.height,
-      bytes:        result.bytes,
-    });
+    const uploadDir = join(process.cwd(), 'public', 'uploads');
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(join(uploadDir, filename), buffer);
+
+    return ok({ url: `/uploads/${filename}`, filename, size: file.size, type: file.type });
   } catch (e) {
-    console.error('Cloudinary upload error:', e);
+    console.error('Upload error:', e);
     return err('Upload failed', 500);
   }
 }
-
-

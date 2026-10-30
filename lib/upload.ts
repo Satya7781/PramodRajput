@@ -4,13 +4,14 @@
  * Uploads a file directly from the browser to Cloudinary using a
  * server-signed request — Vercel's 4.5 MB body limit is bypassed entirely.
  *
- * Returns the secure_url and public_id to store in the database.
+ * Falls back to the local /api/upload endpoint for small images (<4 MB)
+ * when Cloudinary is not configured.
  */
 
 export interface CloudinaryUploadResult {
   url: string;
-  publicId: string;
-  resourceType: 'image' | 'video' | 'raw';
+  publicId?: string;
+  resourceType?: string;
 }
 
 export async function uploadToCloudinary(
@@ -18,7 +19,7 @@ export async function uploadToCloudinary(
   token: string,
   folder = 'media'
 ): Promise<CloudinaryUploadResult> {
-  // Step 1 — get a signed upload token from our API
+  // Step 1 — attempt to get a signed upload token from our API
   const sigRes = await fetch('/api/upload-signature', {
     method: 'POST',
     headers: {
@@ -28,14 +29,33 @@ export async function uploadToCloudinary(
     body: JSON.stringify({ folder }),
   });
 
+  // If Cloudinary is not configured (500) or server unavailable, fall back
+  // to local upload for images ≤ 4 MB
   if (!sigRes.ok) {
-    const body = await sigRes.json().catch(() => ({}));
-    throw new Error(body.error ?? 'Failed to get upload signature');
+    if (file.size > 4 * 1024 * 1024) {
+      throw new Error(
+        'File is too large for upload. Please configure Cloudinary environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) to enable large file uploads.'
+      );
+    }
+    // Fallback: local /api/upload (works for images ≤ 4 MB)
+    const formData = new FormData();
+    formData.append('file', file);
+    const uploadRes = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!uploadRes.ok) {
+      const body = await uploadRes.json().catch(() => ({}));
+      throw new Error(body.error ?? 'Upload failed');
+    }
+    const data = await uploadRes.json();
+    return { url: data.url };
   }
 
   const { timestamp, signature, apiKey, cloudName } = await sigRes.json();
 
-  // Step 2 — upload directly to Cloudinary
+  // Step 2 — upload directly to Cloudinary (bypasses Vercel body limit)
   const formData = new FormData();
   formData.append('file', file);
   formData.append('api_key', apiKey);
@@ -66,13 +86,19 @@ export async function uploadToCloudinary(
  * cloudinaryOptimized
  * -------------------
  * Injects Cloudinary transformation params into a stored URL at display time.
- * Store raw URLs in the DB; apply optimizations here so you can change them later.
- *
- * Examples:
- *   cloudinaryOptimized(url, 'w_800,f_auto,q_auto')   → resized card image
- *   cloudinaryOptimized(url, 'w_1600,f_auto,q_auto')  → full-size detail image
  */
 export function cloudinaryOptimized(url: string, transforms = 'f_auto,q_auto'): string {
   if (!url || !url.includes('cloudinary.com')) return url;
   return url.replace('/upload/', `/upload/${transforms}/`);
+}
+
+/**
+ * uploadFile — simple wrapper used by the registration form
+ * for file/image field uploads.
+ */
+export async function uploadFile(file: File): Promise<string> {
+  const { getAuthToken } = await import('./api-client');
+  const token = getAuthToken() ?? '';
+  const result = await uploadToCloudinary(file, token, 'registrations');
+  return result.url;
 }
