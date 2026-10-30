@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('event_id');
+    const search = searchParams.get('search')?.trim();
 
     // ISSUE-08 fix: use name_field_key from event_forms to correctly identify the name field.
     // Falls back to the first field by sort_order if no name_field_key is configured.
@@ -47,6 +48,19 @@ export async function GET(req: NextRequest) {
     if (eventId) {
       sql += ` AND r.event_id = $1`;
       params.push(eventId);
+    }
+    if (search) {
+      const searchParam = params.length + 1;
+      sql += ` AND (
+        r.registration_number ILIKE $${searchParam}
+        OR EXISTS (
+          SELECT 1
+          FROM registration_values rv
+          WHERE rv.registration_id = r.id
+            AND COALESCE(rv.value_text, rv.file_url, '') ILIKE $${searchParam}
+        )
+      )`;
+      params.push(`%${search}%`);
     }
     sql += ` ORDER BY r.submitted_at DESC`;
 

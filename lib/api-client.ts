@@ -302,9 +302,11 @@ export const certificates = {
     if (params.search) q.set('search', params.search);
     return apiFetch<Certificate[]>(`/api/certificates?${q}`);
   },
-  pending(eventId?: string) {
-    const q = eventId ? `?event_id=${eventId}` : '';
-    return apiFetch<PendingReg[]>(`/api/certificates/pending${q}`);
+  pending(eventId?: string, search?: string) {
+    const q = new URLSearchParams();
+    if (eventId) q.set('event_id', eventId);
+    if (search) q.set('search', search);
+    return apiFetch<PendingReg[]>(`/api/certificates/pending?${q}`);
   },
   issue(payload: { registration_id: string; event_id: string; template_id: string; participant_name: string }) {
     return apiFetch<Certificate>('/api/certificates', { method: 'POST', body: JSON.stringify(payload) });

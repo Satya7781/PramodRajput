@@ -69,7 +69,7 @@ export default function CertificatesPage() {
       const eventId = selectedEvent !== 'all' ? selectedEvent : undefined;
       const [certData, pendingData] = await Promise.all([
         certsApi.list({ event_id: eventId, search: search || undefined }),
-        certsApi.pending(eventId),
+        certsApi.pending(eventId, search || undefined),
       ]);
       setCerts(certData as CertWithMeta[]);
       setPendingRegs(pendingData);
@@ -127,7 +127,7 @@ export default function CertificatesPage() {
     finally { setRevoking(null); }
   };
 
-  const filteredCerts = certs.filter((c) => !search || c.certificate_number.toLowerCase().includes(search.toLowerCase()) || c.participant_name.toLowerCase().includes(search.toLowerCase()));
+  const filteredCerts = certs;
 
   return (
     <div className="space-y-6">
@@ -147,7 +147,7 @@ export default function CertificatesPage() {
             <SelectContent>{templates.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
           </Select>
         )}
-        <Input placeholder="Search certificates..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+        <Input placeholder="Search by any participant detail..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
       </div>
 
       <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit">
