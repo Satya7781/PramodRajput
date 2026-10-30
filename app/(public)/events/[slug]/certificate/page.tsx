@@ -30,6 +30,8 @@ export default function EventCertificatePage() {
   const [searched, setSearched]   = useState(false);
   const [cert, setCert]           = useState<CertificateResult | null>(null);
   const [error, setError]         = useState('');
+  const [participantImage, setParticipantImage] = useState<File | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -64,6 +66,42 @@ export default function EventCertificatePage() {
     } finally {
       setLoading(false);
       setSearched(true);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!cert) return;
+    setDownloading(true);
+    setError('');
+
+    try {
+      const response = participantImage
+        ? await fetch(`/api/certificates/${cert.id}/download`, {
+            method: 'POST',
+            body: (() => {
+              const formData = new FormData();
+              formData.append('participant_image', participantImage);
+              return formData;
+            })(),
+          })
+        : await fetch(`/api/certificates/${cert.id}/download`);
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Unable to download certificate');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${cert.certificate_number}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : 'Unable to download certificate');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -182,26 +220,35 @@ export default function EventCertificatePage() {
                   </div>
                 </div>
 
-                {cert.pdf_url ? (
-                  <a
-                    href={cert.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
-                    className="flex items-center justify-center gap-2 w-full rounded-lg bg-green-600 text-white px-4 py-3 text-sm font-semibold hover:bg-green-700 transition-colors"
-                  >
-                    <Download className="h-4 w-4" />
-                    {lang === 'hi' ? 'प्रमाण पत्र डाउनलोड करें' : 'Download Certificate'}
-                  </a>
-                ) : (
-                  <a
-                    href={`/api/certificates/${cert.id}/download`}
-                    className="flex items-center justify-center gap-2 w-full rounded-lg bg-green-600 text-white px-4 py-3 text-sm font-semibold hover:bg-green-700 transition-colors"
-                  >
-                    <Download className="h-4 w-4" />
-                    {lang === 'hi' ? 'प्रमाण पत्र डाउनलोड करें' : 'Download Certificate'}
-                  </a>
-                )}
+                <div className="rounded-lg border border-green-200 dark:border-green-800/40 bg-white/60 dark:bg-black/10 p-4 mb-4">
+                  <label htmlFor="participantImage" className="block text-sm font-semibold mb-1">
+                    {lang === 'hi' ? 'पासपोर्ट साइज फोटो (वैकल्पिक)' : 'Passport-size photo (optional)'}
+                  </label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {lang === 'hi'
+                      ? 'यदि पंजीकरण के समय फोटो नहीं दी थी, तो यहाँ JPG या PNG फोटो अपलोड करें।'
+                      : 'If you did not upload a photo during registration, upload your JPG or PNG photo here.'}
+                  </p>
+                  <input
+                    id="participantImage"
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    onChange={(event) => setParticipantImage(event.target.files?.[0] ?? null)}
+                    className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-green-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-green-800 hover:file:bg-green-200"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="flex items-center justify-center gap-2 w-full rounded-lg bg-green-600 text-white px-4 py-3 text-sm font-semibold hover:bg-green-700 disabled:opacity-60 transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  {downloading
+                    ? (lang === 'hi' ? 'तैयार हो रहा है...' : 'Preparing...')
+                    : (lang === 'hi' ? 'प्रमाण पत्र डाउनलोड करें' : 'Download Certificate')}
+                </button>
 
                 <p className="text-xs text-center text-muted-foreground mt-3">
                   {lang === 'hi'

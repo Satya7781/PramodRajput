@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { generateCertificatePdfBytes } from '@/lib/generate-certificate-pdf';
 
-export async function GET(
-  _req: NextRequest,
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/png': '.png',
+};
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+async function generateCertificateDownload(
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -72,9 +79,29 @@ export async function GET(
       return NextResponse.json({ error: 'Certificate template fields are not configured' }, { status: 409 });
     }
 
+    let participantImageData: { buffer: Buffer; ext: string } | null = null;
+    if (req.method === 'POST') {
+      const formData = await req.formData();
+      const image = formData.get('participant_image');
+      if (!(image instanceof File) || image.size === 0) {
+        return NextResponse.json({ error: 'Please upload a passport-size image' }, { status: 400 });
+      }
+      if (!ALLOWED_IMAGE_TYPES[image.type]) {
+        return NextResponse.json({ error: 'Only JPG and PNG images are allowed' }, { status: 400 });
+      }
+      if (image.size > MAX_IMAGE_SIZE) {
+        return NextResponse.json({ error: 'Image must be 5 MB or smaller' }, { status: 413 });
+      }
+      participantImageData = {
+        buffer: Buffer.from(await image.arrayBuffer()),
+        ext: ALLOWED_IMAGE_TYPES[image.type],
+      };
+    }
+
     const pdfBytes = await generateCertificatePdfBytes({
       backgroundUrl: certificate.background_url,
-      participantImageUrl: certificate.participant_image_url,
+      participantImageUrl: participantImageData ? null : certificate.participant_image_url,
+      participantImageData,
       templateWidth: certificate.width,
       templateHeight: certificate.height,
       orientation: certificate.orientation,
@@ -96,4 +123,12 @@ export async function GET(
     console.error('GET /api/certificates/[id]/download error:', error);
     return NextResponse.json({ error: 'Unable to generate certificate PDF' }, { status: 500 });
   }
+}
+
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
+  return generateCertificateDownload(req, context);
+}
+
+export async function POST(req: NextRequest, context: { params: { id: string } }) {
+  return generateCertificateDownload(req, context);
 }

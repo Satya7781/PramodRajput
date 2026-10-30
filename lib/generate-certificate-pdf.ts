@@ -26,6 +26,7 @@ export interface TemplateFieldConfig {
 export interface GeneratePdfOptions {
   backgroundUrl: string;        // local path like /uploads/abc.png or full URL
   participantImageUrl?: string | null;
+  participantImageData?: { buffer: Buffer; ext: string } | null;
   templateWidth: number;
   templateHeight: number;
   fields: TemplateFieldConfig[];
@@ -142,7 +143,7 @@ export async function generateCertificatePdf(options: GeneratePdfOptions): Promi
 }
 
 export async function generateCertificatePdfBytes(options: GeneratePdfOptions): Promise<Uint8Array> {
-  const { backgroundUrl, participantImageUrl, templateWidth, templateHeight, fields, fieldValues } = options;
+  const { backgroundUrl, participantImageUrl, participantImageData, templateWidth, templateHeight, fields, fieldValues } = options;
 
   const pdfDoc = await PDFDocument.create();
 
@@ -173,13 +174,13 @@ export async function generateCertificatePdfBytes(options: GeneratePdfOptions): 
   }
 
   let participantImage: Awaited<ReturnType<PDFDocument['embedPng']>> | Awaited<ReturnType<PDFDocument['embedJpg']>> | null = null;
-  if (participantImageUrl) {
-    const participantImageData = await loadImageBuffer(participantImageUrl);
-    if (participantImageData) {
+  if (participantImageUrl || participantImageData) {
+    const imageData = participantImageData ?? await loadImageBuffer(participantImageUrl as string);
+    if (imageData) {
       try {
-        participantImage = participantImageData.ext === '.png'
-          ? await pdfDoc.embedPng(participantImageData.buffer)
-          : await pdfDoc.embedJpg(participantImageData.buffer);
+        participantImage = imageData.ext === '.png'
+          ? await pdfDoc.embedPng(imageData.buffer)
+          : await pdfDoc.embedJpg(imageData.buffer);
       } catch (error) {
         console.error('Unable to embed participant image in certificate:', error);
       }
