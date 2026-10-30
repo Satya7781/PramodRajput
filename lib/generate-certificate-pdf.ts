@@ -78,6 +78,33 @@ async function getFont(doc: PDFDocument, family: string, weight: string): Promis
   return doc.embedFont(weight === 'bold' ? StandardFonts.HelveticaBold : StandardFonts.Helvetica);
 }
 
+function getFieldValue(field: TemplateFieldConfig, fieldValues: Record<string, string>): string | undefined {
+  const exactValue = fieldValues[field.field_key];
+  if (exactValue !== undefined) return exactValue;
+
+  const normalizedKey = field.field_key.toLowerCase().replace(/[\s-]+/g, '_');
+  const normalizedLabel = field.label.toLowerCase().replace(/[\s-]+/g, '_');
+  const nameFieldAliases = [
+    'participant_name',
+    'attendee_name',
+    'recipient_name',
+    'user_name',
+    'full_name',
+    'participant',
+    'attendee',
+    'recipient',
+    'user',
+    'name',
+  ];
+  const isParticipantNameField =
+    nameFieldAliases.includes(normalizedKey) ||
+    nameFieldAliases.includes(normalizedLabel) ||
+    (normalizedKey.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedKey.includes(prefix))) ||
+    (normalizedLabel.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedLabel.includes(prefix)));
+
+  return isParticipantNameField ? fieldValues.participant_name : undefined;
+}
+
 export async function generateCertificatePdf(options: GeneratePdfOptions): Promise<string> {
   const pdfBytes = await generateCertificatePdfBytes(options);
 
@@ -123,7 +150,7 @@ export async function generateCertificatePdfBytes(options: GeneratePdfOptions): 
 
   // Draw each configured text field
   for (const fieldConfig of fields) {
-    const value = fieldValues[fieldConfig.field_key];
+    const value = getFieldValue(fieldConfig, fieldValues);
     if (!value) continue;
 
     const font = await getFont(pdfDoc, fieldConfig.font_family, fieldConfig.font_weight);
