@@ -14,10 +14,10 @@ interface CertificateResult {
   id: string;
   certificate_number: string;
   participant_name: string;
-  issue_date: string;
-  status: 'issued' | 'revoked';
+  issued_at: string;       // DB field name
+  status: 'valid' | 'revoked';
   event_title: string;
-  certificate_url: string | null;
+  pdf_url: string | null;  // DB field name
 }
 
 export default function EventCertificatePage() {
@@ -175,14 +175,16 @@ export default function EventCertificatePage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{lang === 'hi' ? 'जारी तारीख' : 'Issue Date'}</span>
                     <span className="font-semibold">
-                      {new Date(cert.issue_date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {cert.issued_at
+                        ? new Date(cert.issued_at).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                        : '—'}
                     </span>
                   </div>
                 </div>
 
-                {cert.certificate_url ? (
+                {cert.pdf_url ? (
                   <a
-                    href={cert.certificate_url}
+                    href={cert.pdf_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     download
