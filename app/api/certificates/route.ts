@@ -80,6 +80,17 @@ export async function POST(req: NextRequest) {
     // Generate the PDF using the template background and field positions
     let pdfUrl: string | null = null;
     try {
+      const participantImage = await queryOne<{ participant_image_url: string | null }>(
+        `SELECT rv.file_url AS participant_image_url
+         FROM registration_values rv
+         JOIN form_fields ff ON ff.id = rv.field_id
+         WHERE rv.registration_id = $1
+           AND ff.field_type = 'image'
+           AND rv.file_url IS NOT NULL
+         ORDER BY ff.sort_order
+         LIMIT 1`,
+        [registration_id]
+      );
       const template = await queryOne<{
         background_url: string | null;
         width: number;
@@ -113,6 +124,7 @@ export async function POST(req: NextRequest) {
         const { generateCertificatePdf } = await import('@/lib/generate-certificate-pdf');
         pdfUrl = await generateCertificatePdf({
           backgroundUrl: template.background_url,
+          participantImageUrl: participantImage?.participant_image_url,
           templateWidth: template.width,
           templateHeight: template.height,
           orientation: template.orientation,

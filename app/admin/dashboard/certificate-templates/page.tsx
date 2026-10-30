@@ -45,11 +45,33 @@ const DEFAULT_FIELD: TemplateField = {
   color: '#1a1a1a',
 };
 
+const DEFAULT_IMAGE_FIELD: TemplateField = {
+  field_key: 'participant_image',
+  label: 'Participant Image',
+  x_position: 60,
+  y_position: 60,
+  width: 180,
+  height: 180,
+  font_family: 'Helvetica',
+  font_size: 24,
+  font_weight: 'normal',
+  text_align: 'center',
+  color: '#000000',
+};
+
 const FONT_FAMILIES = ['Helvetica', 'Times-Roman', 'Courier'];
 
 function getPreviewValue(field: TemplateField): string {
   const normalizedKey = field.field_key.toLowerCase().replace(/[\s-]+/g, '_');
   const normalizedLabel = field.label.toLowerCase().replace(/[\s-]+/g, '_');
+  if (
+    ['participant_image', 'participant_photo', 'attendee_image', 'attendee_photo', 'profile_image', 'profile_photo', 'avatar', 'photo', 'image'].includes(normalizedKey) ||
+    ['participant_image', 'participant_photo', 'attendee_image', 'attendee_photo', 'profile_image', 'profile_photo', 'avatar', 'photo', 'image'].includes(normalizedLabel) ||
+    /(image|photo|picture)/.test(normalizedKey) ||
+    /(image|photo|picture)/.test(normalizedLabel)
+  ) {
+    return 'Participant Image';
+  }
   if (normalizedKey === 'certificate_number' || normalizedLabel === 'certificate_number') {
     return 'PR-CERT-2026-000001';
   }
@@ -118,6 +140,11 @@ function TemplateFormModal({
 
   const addField = () => {
     setFields((prev) => [...prev, { ...DEFAULT_FIELD, field_key: `field_${Date.now()}`, label: 'New Field' }]);
+    setExpandedField(fields.length);
+  };
+
+  const addImageField = () => {
+    setFields((prev) => [...prev, { ...DEFAULT_IMAGE_FIELD }]);
     setExpandedField(fields.length);
   };
 
@@ -236,11 +263,14 @@ function TemplateFormModal({
               <Button variant="outline" size="sm" onClick={addField}>
                 <Plus className="h-4 w-4 mr-1" /> Add Field
               </Button>
+              <Button variant="outline" size="sm" onClick={addImageField}>
+                <FileImage className="h-4 w-4 mr-1" /> Add Participant Image
+              </Button>
             </div>
 
             {fields.length === 0 && (
               <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                No text fields. Add at least one for the participant name.
+                No fields. Add a text field for the participant name or use <code>participant_image</code> for the participant photo.
               </div>
             )}
 
@@ -355,7 +385,7 @@ function TemplateFormModal({
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div>
                 <h2 className="text-lg font-bold">Certificate Preview</h2>
-                <p className="text-xs text-muted-foreground mt-1">Sample values are shown for configured fields.</p>
+                <p className="text-xs text-muted-foreground mt-1">Drag fields to position them, then save the template.</p>
               </div>
               <button onClick={() => setShowPreview(false)} className="rounded-lg p-1 hover:bg-muted" aria-label="Close preview">
                 <X className="h-5 w-5" />
@@ -370,7 +400,31 @@ function TemplateFormModal({
                 {fields.map((field, index) => (
                   <div
                     key={`${field.field_key}-${index}`}
-                    className="absolute overflow-hidden whitespace-nowrap"
+                    className="absolute cursor-move overflow-hidden whitespace-nowrap border border-primary/40 hover:border-primary"
+                    onPointerDown={(event) => {
+                      const fieldElement = event.currentTarget;
+                      fieldElement.setPointerCapture(event.pointerId);
+                      const container = fieldElement.parentElement?.getBoundingClientRect();
+                      if (!container) return;
+                      const startX = event.clientX;
+                      const startY = event.clientY;
+                      const originalX = field.x_position;
+                      const originalY = field.y_position;
+                      const handleMove = (moveEvent: PointerEvent) => {
+                        const nextX = originalX + ((moveEvent.clientX - startX) / container.width) * width;
+                        const nextY = originalY + ((moveEvent.clientY - startY) / container.height) * height;
+                        updateField(index, {
+                          x_position: Math.max(0, Math.min(width - field.width, Math.round(nextX))),
+                          y_position: Math.max(0, Math.min(height - field.height, Math.round(nextY))),
+                        });
+                      };
+                      const handleUp = () => {
+                        fieldElement.removeEventListener('pointermove', handleMove);
+                        fieldElement.removeEventListener('pointerup', handleUp);
+                      };
+                      fieldElement.addEventListener('pointermove', handleMove);
+                      fieldElement.addEventListener('pointerup', handleUp, { once: true });
+                    }}
                     style={{
                       left: `${(field.x_position / width) * 100}%`,
                       top: `${(field.y_position / height) * 100}%`,

@@ -25,6 +25,7 @@ export interface TemplateFieldConfig {
 
 export interface GeneratePdfOptions {
   backgroundUrl: string;        // local path like /uploads/abc.png or full URL
+  participantImageUrl?: string | null;
   templateWidth: number;
   templateHeight: number;
   fields: TemplateFieldConfig[];
@@ -107,6 +108,27 @@ function getFieldValue(field: TemplateFieldConfig, fieldValues: Record<string, s
   return isParticipantNameField ? fieldValues.participant_name : undefined;
 }
 
+function isParticipantImageField(field: TemplateFieldConfig): boolean {
+  const key = field.field_key.toLowerCase().replace(/[\s-]+/g, '_');
+  const label = field.label.toLowerCase().replace(/[\s-]+/g, '_');
+  const imageAliases = [
+    'participant_image',
+    'participant_photo',
+    'attendee_image',
+    'attendee_photo',
+    'profile_image',
+    'profile_photo',
+    'avatar',
+    'photo',
+    'image',
+  ];
+
+  return imageAliases.includes(key) ||
+    imageAliases.includes(label) ||
+    (['participant', 'attendee', 'profile'].some((prefix) => key.includes(prefix)) && /(image|photo|picture)/.test(key)) ||
+    (['participant', 'attendee', 'profile'].some((prefix) => label.includes(prefix)) && /(image|photo|picture)/.test(label));
+}
+
 export async function generateCertificatePdf(options: GeneratePdfOptions): Promise<string> {
   const pdfBytes = await generateCertificatePdfBytes(options);
 
@@ -120,7 +142,7 @@ export async function generateCertificatePdf(options: GeneratePdfOptions): Promi
 }
 
 export async function generateCertificatePdfBytes(options: GeneratePdfOptions): Promise<Uint8Array> {
-  const { backgroundUrl, templateWidth, templateHeight, fields, fieldValues } = options;
+  const { backgroundUrl, participantImageUrl, templateWidth, templateHeight, fields, fieldValues } = options;
 
   const pdfDoc = await PDFDocument.create();
 
@@ -150,8 +172,43 @@ export async function generateCertificatePdfBytes(options: GeneratePdfOptions): 
     }
   }
 
+  let participantImage: Awaited<ReturnType<PDFDocument['embedPng']>> | Awaited<ReturnType<PDFDocument['embedJpg']>> | null = null;
+  if (participantImageUrl) {
+    const participantImageData = await loadImageBuffer(participantImageUrl);
+    if (participantImageData) {
+      try {
+        participantImage = participantImageData.ext === '.png'
+          ? await pdfDoc.embedPng(participantImageData.buffer)
+          : await pdfDoc.embedJpg(participantImageData.buffer);
+      } catch (error) {
+        console.error('Unable to embed participant image in certificate:', error);
+      }
+    }
+  }
+
   // Draw each configured text field
   for (const fieldConfig of fields) {
+    if (isParticipantImageField(fieldConfig)) {
+      if (!participantImage) continue;
+
+      const x = fieldConfig.x_position * scaleX;
+      const yFromBottom = PAGE_H - (fieldConfig.y_position * scaleY) - (fieldConfig.height * scaleY);
+      const boxWidth = fieldConfig.width * scaleX;
+      const boxHeight = fieldConfig.height * scaleY;
+      const imageDimensions = participantImage.scale(1);
+      const imageScale = Math.min(boxWidth / imageDimensions.width, boxHeight / imageDimensions.height);
+      const imageWidth = imageDimensions.width * imageScale;
+      const imageHeight = imageDimensions.height * imageScale;
+
+      page.drawImage(participantImage, {
+        x: x + (boxWidth - imageWidth) / 2,
+        y: yFromBottom + (boxHeight - imageHeight) / 2,
+        width: imageWidth,
+        height: imageHeight,
+      });
+      continue;
+    }
+
     const value = getFieldValue(fieldConfig, fieldValues);
     if (!value) continue;
 
@@ -176,7 +233,7 @@ export async function generateCertificatePdfBytes(options: GeneratePdfOptions): 
 
     page.drawText(value, {
       x: drawX,
-      y: yFromBottom + (fieldConfig.height * scaleY * 0.25), // baseline offset
+      y: yFromBottom + (fontSize * 0.8), // align the text's visual top with the field box
       size: fontSize,
       font,
       color: textColor,

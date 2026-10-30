@@ -9,14 +9,26 @@ export async function GET(
   try {
     const certificate = await queryOne<{
       certificate_number: string;
+      registration_id: string;
       participant_name: string;
+      participant_image_url: string | null;
       status: 'valid' | 'revoked';
       background_url: string | null;
       width: number;
       height: number;
       orientation: string;
     }>(
-      `SELECT c.certificate_number, c.participant_name, c.status,
+      `SELECT c.certificate_number, c.registration_id, c.participant_name, c.status,
+              (
+                SELECT rv.file_url
+                FROM registration_values rv
+                JOIN form_fields ff ON ff.id = rv.field_id
+                WHERE rv.registration_id = c.registration_id
+                  AND ff.field_type = 'image'
+                  AND rv.file_url IS NOT NULL
+                ORDER BY ff.sort_order
+                LIMIT 1
+              ) AS participant_image_url,
               t.background_url, t.width, t.height, t.orientation
        FROM certificates c
        JOIN certificate_templates t ON t.id = c.template_id
@@ -62,6 +74,7 @@ export async function GET(
 
     const pdfBytes = await generateCertificatePdfBytes({
       backgroundUrl: certificate.background_url,
+      participantImageUrl: certificate.participant_image_url,
       templateWidth: certificate.width,
       templateHeight: certificate.height,
       orientation: certificate.orientation,
