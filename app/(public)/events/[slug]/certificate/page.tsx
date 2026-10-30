@@ -25,7 +25,7 @@ export default function EventCertificatePage() {
   const { lang } = useLanguage();
 
   const [event, setEvent]         = useState<Event | null>(null);
-  const [regNumber, setRegNumber] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading]     = useState(false);
   const [searched, setSearched]   = useState(false);
   const [cert, setCert]           = useState<CertificateResult | null>(null);
@@ -40,7 +40,7 @@ export default function EventCertificatePage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regNumber.trim()) return;
+    if (!identifier.trim()) return;
     setLoading(true);
     setError('');
     setCert(null);
@@ -48,12 +48,12 @@ export default function EventCertificatePage() {
 
     try {
       const res = await fetch(
-        `/api/certificates/verify/${encodeURIComponent(regNumber.trim())}`
+        `/api/certificates/verify/${encodeURIComponent(identifier.trim())}`
       );
       const data = await res.json();
 
       if (!res.ok || !data) {
-        setError(lang === 'hi' ? 'प्रमाण पत्र नहीं मिला। कृपया पंजीकरण नंबर जाँचें।' : 'Certificate not found. Please check your registration number.');
+        setError(lang === 'hi' ? 'प्रमाण पत्र नहीं मिला। कृपया अपना नंबर जाँचें।' : 'Certificate not found. Please check the number and try again.');
       } else if (data.status === 'revoked') {
         setError(lang === 'hi' ? 'यह प्रमाण पत्र रद्द कर दिया गया है।' : 'This certificate has been revoked.');
       } else {
@@ -107,23 +107,23 @@ export default function EventCertificatePage() {
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
             <p className="text-sm text-muted-foreground mb-6">
               {lang === 'hi'
-                ? 'अपना प्रमाण पत्र डाउनलोड करने के लिए अपना पंजीकरण नंबर दर्ज करें।'
-                : 'Enter your registration number to find and download your participation certificate.'}
+                ? 'अपना प्रमाण पत्र डाउनलोड करने के लिए अपना पंजीकरण नंबर या प्रमाण पत्र नंबर दर्ज करें।'
+                : 'Enter your registration number or certificate number to find and download your participation certificate.'}
             </p>
 
             <form onSubmit={handleSearch} className="space-y-4">
               <div>
-                <label htmlFor="regNumber" className="block text-sm font-medium mb-1.5">
-                  {lang === 'hi' ? 'पंजीकरण नंबर' : 'Registration Number'}
+                <label htmlFor="certificateIdentifier" className="block text-sm font-medium mb-1.5">
+                  {lang === 'hi' ? 'पंजीकरण या प्रमाण पत्र नंबर' : 'Registration or Certificate Number'}
                   <span className="text-destructive ml-1">*</span>
                 </label>
                 <div className="flex gap-2">
                   <input
-                    id="regNumber"
+                    id="certificateIdentifier"
                     type="text"
-                    value={regNumber}
-                    onChange={e => setRegNumber(e.target.value)}
-                    placeholder="e.g., PR-2026-000001"
+                    value={identifier}
+                    onChange={e => setIdentifier(e.target.value)}
+                    placeholder="e.g., PR-2026-000001 or PR-CERT-2026-000001"
                     className="flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40"
                     required
                   />

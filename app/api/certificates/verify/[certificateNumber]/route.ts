@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import { ok, err } from '@/lib/api-helpers';
 import { queryOne } from '@/lib/db';
 
-// GET /api/certificates/verify/[certificateNumber] — public
+// GET /api/certificates/verify/[certificateNumber] — public.
+// The identifier may be a certificate number, registration number, or verification token.
 export async function GET(
   _req: NextRequest,
   { params }: { params: { certificateNumber: string } }
@@ -12,7 +13,10 @@ export async function GET(
       `SELECT c.*, e.title as event_title, e.start_date, e.end_date, e.venue
        FROM certificates c
        LEFT JOIN events e ON e.id = c.event_id
-       WHERE c.certificate_number = $1`,
+       LEFT JOIN registrations r ON r.id = c.registration_id
+       WHERE c.certificate_number = $1
+          OR r.registration_number = $1
+          OR c.verification_token = $1`,
       [decodeURIComponent(params.certificateNumber)]
     );
 
