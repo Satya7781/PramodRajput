@@ -95,10 +95,12 @@ function getFieldValue(field: TemplateFieldConfig, fieldValues: Record<string, s
     'recipient',
     'user',
     'name',
+    'name_field',
   ];
   const isParticipantNameField =
     nameFieldAliases.includes(normalizedKey) ||
     nameFieldAliases.includes(normalizedLabel) ||
+    normalizedLabel.includes('name') ||
     (normalizedKey.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedKey.includes(prefix))) ||
     (normalizedLabel.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedLabel.includes(prefix)));
 

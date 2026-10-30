@@ -54,8 +54,9 @@ function getPreviewValue(field: TemplateField): string {
     return 'PR-CERT-2026-000001';
   }
   if (
-    ['participant_name', 'attendee_name', 'recipient_name', 'user_name', 'full_name', 'participant', 'attendee', 'recipient', 'user', 'name'].includes(normalizedKey) ||
-    ['participant_name', 'attendee_name', 'recipient_name', 'user_name', 'full_name', 'participant', 'attendee', 'recipient', 'user', 'name'].includes(normalizedLabel) ||
+    ['participant_name', 'attendee_name', 'recipient_name', 'user_name', 'full_name', 'participant', 'attendee', 'recipient', 'user', 'name', 'name_field'].includes(normalizedKey) ||
+    ['participant_name', 'attendee_name', 'recipient_name', 'user_name', 'full_name', 'participant', 'attendee', 'recipient', 'user', 'name', 'name_field'].includes(normalizedLabel) ||
+    normalizedLabel.includes('name') ||
     (normalizedKey.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedKey.includes(prefix))) ||
     (normalizedLabel.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedLabel.includes(prefix)))
   ) {
