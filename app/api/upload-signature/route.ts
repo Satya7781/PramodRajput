@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ok, err, requireEditor, isResponse } from '@/lib/api-helpers';
+import { createHash } from 'crypto';
 
 // POST /api/upload-signature
 // Returns a signed Cloudinary upload signature so the client can upload
@@ -17,18 +18,18 @@ export async function POST(req: NextRequest) {
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
     if (!cloudName || !apiKey || !apiSecret) {
-      return err('Cloudinary is not configured on the server. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.', 500);
+      return err(
+        'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
+        500
+      );
     }
 
     const timestamp = Math.round(Date.now() / 1000);
 
-    // Build the string-to-sign: alphabetically sorted params
+    // Cloudinary signature: SHA-1 of "folder=...&timestamp=...{api_secret}"
+    // Params must be alphabetically sorted with no spaces
     const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
-
-    // Sign using Node.js built-in crypto (no Cloudinary SDK needed)
-    const crypto = await import('crypto');
-    const signature = crypto
-      .createHash('sha256')
+    const signature = createHash('sha1')
       .update(paramsToSign + apiSecret)
       .digest('hex');
 

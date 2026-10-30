@@ -130,17 +130,23 @@ export async function uploadFile(file: File): Promise<string> {
 
     if (!uploadRes.ok) {
       const body = await uploadRes.json().catch(() => ({}));
-      throw new Error(body.error?.message ?? 'Cloudinary upload failed');
+      // Log for debugging
+      console.error('Cloudinary upload error response:', body);
+      throw new Error(body.error?.message ?? `Cloudinary upload failed (HTTP ${uploadRes.status})`);
     }
 
     const data = await uploadRes.json();
     return data.secure_url as string;
   }
 
+  // Signature endpoint failed — log the error for debugging
+  const sigError = await sigRes.json().catch(() => ({}));
+  console.error('Upload signature error:', sigRes.status, sigError);
+
   // Fallback — local /api/upload (works for files < 4 MB only)
   if (file.size > 4 * 1024 * 1024) {
     throw new Error(
-      'File is too large for upload. Please configure Cloudinary environment variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) on the server to upload large files.'
+      `Upload signature failed (${sigError.error ?? sigRes.status}). File too large for fallback upload. Check Cloudinary env vars on server.`
     );
   }
 
