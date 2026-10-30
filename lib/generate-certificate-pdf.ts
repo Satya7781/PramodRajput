@@ -79,6 +79,18 @@ async function getFont(doc: PDFDocument, family: string, weight: string): Promis
 }
 
 export async function generateCertificatePdf(options: GeneratePdfOptions): Promise<string> {
+  const pdfBytes = await generateCertificatePdfBytes(options);
+
+  // Save to /public/certificates/ for deployments that support persistent local files.
+  const certDir = join(process.cwd(), 'public', 'certificates');
+  await mkdir(certDir, { recursive: true });
+  const filename = `${randomBytes(16).toString('hex')}.pdf`;
+  await writeFile(join(certDir, filename), pdfBytes);
+
+  return `/certificates/${filename}`;
+}
+
+export async function generateCertificatePdfBytes(options: GeneratePdfOptions): Promise<Uint8Array> {
   const { backgroundUrl, templateWidth, templateHeight, fields, fieldValues } = options;
 
   const pdfDoc = await PDFDocument.create();
@@ -142,13 +154,5 @@ export async function generateCertificatePdf(options: GeneratePdfOptions): Promi
     });
   }
 
-  const pdfBytes = await pdfDoc.save();
-
-  // Save to /public/certificates/
-  const certDir = join(process.cwd(), 'public', 'certificates');
-  await mkdir(certDir, { recursive: true });
-  const filename = `${randomBytes(16).toString('hex')}.pdf`;
-  await writeFile(join(certDir, filename), pdfBytes);
-
-  return `/certificates/${filename}`;
+  return pdfDoc.save();
 }

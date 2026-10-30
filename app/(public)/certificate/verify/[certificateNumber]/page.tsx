@@ -114,9 +114,9 @@ export default function CertificateResultPage() {
                     </div>
                   </div>
                 </div>
-                {certificate.pdf_url && (
+                {certificate.status === 'valid' && (
                   <div className="mt-5 sm:mt-6 text-center">
-                    <a href={certificate.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 sm:px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all">
+                    <a href={certificate.pdf_url ?? `/api/certificates/${certificate.id}/download`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 sm:px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all">
                       {t('certificate','download')}
                     </a>
                   </div>

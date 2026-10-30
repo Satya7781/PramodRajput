@@ -194,11 +194,13 @@ export default function EventCertificatePage() {
                     {lang === 'hi' ? 'प्रमाण पत्र डाउनलोड करें' : 'Download Certificate'}
                   </a>
                 ) : (
-                  <div className="text-center rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
-                    {lang === 'hi'
-                      ? 'प्रमाण पत्र जल्द उपलब्ध होगा।'
-                      : 'Certificate will be available for download soon.'}
-                  </div>
+                  <a
+                    href={`/api/certificates/${cert.id}/download`}
+                    className="flex items-center justify-center gap-2 w-full rounded-lg bg-green-600 text-white px-4 py-3 text-sm font-semibold hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="h-4 w-4" />
+                    {lang === 'hi' ? 'प्रमाण पत्र डाउनलोड करें' : 'Download Certificate'}
+                  </a>
                 )}
 
                 <p className="text-xs text-center text-muted-foreground mt-3">
