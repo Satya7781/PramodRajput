@@ -185,14 +185,16 @@ export default function RegistrationsPage() {
                           <button onClick={() => loadDetails(reg)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors" title="View Details">
                             {expandedId === reg.id ? <ChevronUp className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                           </button>
-                          {reg.status === 'pending' && (
+                          {(reg.status === 'pending' || reg.status === 'rejected') && (
                             <>
                               <button onClick={() => updateStatus(reg.id, 'approved')} disabled={actionLoading === reg.id + 'approved'} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-green-100 hover:text-green-700 transition-colors" title="Approve">
                                 {actionLoading === reg.id + 'approved' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                               </button>
-                              <button onClick={() => updateStatus(reg.id, 'rejected')} disabled={actionLoading === reg.id + 'rejected'} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors" title="Reject">
-                                {actionLoading === reg.id + 'rejected' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
-                              </button>
+                              {reg.status === 'pending' && (
+                                <button onClick={() => updateStatus(reg.id, 'rejected')} disabled={actionLoading === reg.id + 'rejected'} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors" title="Reject">
+                                  {actionLoading === reg.id + 'rejected' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                                </button>
+                              )}
                             </>
                           )}
                           {reg.status === 'approved' && (
