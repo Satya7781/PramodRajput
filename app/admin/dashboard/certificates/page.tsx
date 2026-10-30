@@ -8,7 +8,7 @@ import type { PendingReg } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Award, Loader2, ShieldX, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Award, Eye, Loader2, ShieldX, ShieldCheck, RefreshCw } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
@@ -191,15 +191,15 @@ export default function CertificatesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          {cert.pdf_url && (
+                          {cert.status === 'valid' && (
                             <a
-                              href={cert.pdf_url}
+                              href={`/api/certificates/${cert.id}/download`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex h-8 items-center justify-center rounded-lg px-2 hover:bg-muted transition-colors text-xs text-primary"
-                              title="Download PDF"
+                              className="flex h-8 items-center justify-center gap-1 rounded-lg px-2 hover:bg-muted transition-colors text-xs text-primary"
+                              title="View certificate"
                             >
-                              PDF
+                              <Eye className="h-3.5 w-3.5" /> View
                             </a>
                           )}
                           {cert.status === 'valid' ? (

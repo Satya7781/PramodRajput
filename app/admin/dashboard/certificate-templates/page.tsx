@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Plus, Pencil, Trash2, Loader2, FileImage, X, Save, ChevronDown, ChevronUp,
+  Plus, Pencil, Trash2, Loader2, FileImage, X, Save, Eye, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -47,6 +47,23 @@ const DEFAULT_FIELD: TemplateField = {
 
 const FONT_FAMILIES = ['Helvetica', 'Times-Roman', 'Courier'];
 
+function getPreviewValue(field: TemplateField): string {
+  const normalizedKey = field.field_key.toLowerCase().replace(/[\s-]+/g, '_');
+  const normalizedLabel = field.label.toLowerCase().replace(/[\s-]+/g, '_');
+  if (normalizedKey === 'certificate_number' || normalizedLabel === 'certificate_number') {
+    return 'PR-CERT-2026-000001';
+  }
+  if (
+    ['participant_name', 'attendee_name', 'recipient_name', 'user_name', 'full_name', 'participant', 'attendee', 'recipient', 'user', 'name'].includes(normalizedKey) ||
+    ['participant_name', 'attendee_name', 'recipient_name', 'user_name', 'full_name', 'participant', 'attendee', 'recipient', 'user', 'name'].includes(normalizedLabel) ||
+    (normalizedKey.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedKey.includes(prefix))) ||
+    (normalizedLabel.includes('name') && ['participant', 'attendee', 'recipient', 'user'].some((prefix) => normalizedLabel.includes(prefix)))
+  ) {
+    return 'Participant Name';
+  }
+  return field.label || 'Sample Text';
+}
+
 function TemplateFormModal({
   initial,
   onClose,
@@ -81,6 +98,7 @@ function TemplateFormModal({
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedField, setExpandedField] = useState<number | null>(0);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -320,12 +338,59 @@ function TemplateFormModal({
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border sticky bottom-0 bg-card">
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={() => setShowPreview(true)} disabled={!backgroundUrl}>
+            <Eye className="h-4 w-4 mr-2" /> Preview
+          </Button>
           <Button onClick={handleSave} disabled={saving || uploading}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             {isEdit ? 'Update Template' : 'Create Template'}
           </Button>
         </div>
       </div>
+
+      {showPreview && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-card rounded-2xl border border-border w-full max-w-5xl max-h-[92vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <div>
+                <h2 className="text-lg font-bold">Certificate Preview</h2>
+                <p className="text-xs text-muted-foreground mt-1">Sample values are shown for configured fields.</p>
+              </div>
+              <button onClick={() => setShowPreview(false)} className="rounded-lg p-1 hover:bg-muted" aria-label="Close preview">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div
+                className="relative w-full overflow-hidden rounded-lg border border-border bg-muted/30"
+                style={{ aspectRatio: `${width} / ${height}`, containerType: 'inline-size' }}
+              >
+                {backgroundUrl && <img src={backgroundUrl} alt="Certificate preview background" className="absolute inset-0 h-full w-full object-fill" />}
+                {fields.map((field, index) => (
+                  <div
+                    key={`${field.field_key}-${index}`}
+                    className="absolute overflow-hidden whitespace-nowrap"
+                    style={{
+                      left: `${(field.x_position / width) * 100}%`,
+                      top: `${(field.y_position / height) * 100}%`,
+                      width: `${(field.width / width) * 100}%`,
+                      height: `${(field.height / height) * 100}%`,
+                      color: field.color,
+                      fontFamily: field.font_family,
+                      fontWeight: field.font_weight,
+                      textAlign: field.text_align as 'left' | 'center' | 'right',
+                      fontSize: `${(field.font_size / width) * 100}cqw`,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {getPreviewValue(field)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
