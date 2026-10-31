@@ -5,13 +5,11 @@
 
 import { PDFDocument, rgb, StandardFonts, type PDFFont } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
+import 'regenerator-runtime/runtime';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join, extname } from 'path';
 import { randomBytes } from 'crypto';
 import { existsSync } from 'fs';
-
-// fontkit's shaping engine expects this runtime in Node.js.
-eval('require')('regenerator-runtime/runtime');
 
 export interface TemplateFieldConfig {
   field_key: string;
@@ -80,8 +78,8 @@ function containsDevanagari(text: string): boolean {
 async function getFont(doc: PDFDocument, family: string, weight: string, text: string): Promise<PDFFont> {
   if (containsDevanagari(text)) {
     const fontPath = weight === 'bold'
-      ? join(process.cwd(), 'node_modules', '@fontsource', 'noto-sans-devanagari', 'files', 'noto-sans-devanagari-devanagari-700-normal.woff')
-      : join(process.cwd(), 'node_modules', '@fontsource', 'noto-sans-devanagari', 'files', 'noto-sans-devanagari-devanagari-400-normal.woff');
+      ? join(process.cwd(), 'public', 'fonts', 'noto-sans-devanagari-700.woff')
+      : join(process.cwd(), 'public', 'fonts', 'noto-sans-devanagari-400.woff');
     return doc.embedFont(await readFile(fontPath));
   }
 
