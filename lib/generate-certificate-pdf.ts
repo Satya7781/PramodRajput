@@ -4,10 +4,14 @@
  */
 
 import { PDFDocument, rgb, StandardFonts, type PDFFont } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join, extname } from 'path';
 import { randomBytes } from 'crypto';
 import { existsSync } from 'fs';
+
+// fontkit's shaping engine expects this runtime in Node.js.
+eval('require')('regenerator-runtime/runtime');
 
 export interface TemplateFieldConfig {
   field_key: string;
@@ -68,8 +72,19 @@ async function loadImageBuffer(backgroundUrl: string): Promise<{ buffer: Buffer;
   return null;
 }
 
-/** Pick the correct standard font */
-async function getFont(doc: PDFDocument, family: string, weight: string): Promise<PDFFont> {
+function containsDevanagari(text: string): boolean {
+  return /[\u0900-\u097F]/u.test(text);
+}
+
+/** Pick a font that can encode the text, falling back to the configured standard font. */
+async function getFont(doc: PDFDocument, family: string, weight: string, text: string): Promise<PDFFont> {
+  if (containsDevanagari(text)) {
+    const fontPath = weight === 'bold'
+      ? join(process.cwd(), 'node_modules', '@fontsource', 'noto-sans-devanagari', 'files', 'noto-sans-devanagari-devanagari-700-normal.woff')
+      : join(process.cwd(), 'node_modules', '@fontsource', 'noto-sans-devanagari', 'files', 'noto-sans-devanagari-devanagari-400-normal.woff');
+    return doc.embedFont(await readFile(fontPath));
+  }
+
   if (family.toLowerCase().includes('times')) {
     return doc.embedFont(weight === 'bold' ? StandardFonts.TimesRomanBold : StandardFonts.TimesRoman);
   }
@@ -146,6 +161,7 @@ export async function generateCertificatePdfBytes(options: GeneratePdfOptions): 
   const { backgroundUrl, participantImageUrl, participantImageData, templateWidth, templateHeight, fields, fieldValues } = options;
 
   const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
 
   // A4 Landscape: 841.89 × 595.28 pt  (1pt = 1/72 inch)
   // We treat the template pixel dimensions as the logical canvas.
@@ -213,7 +229,7 @@ export async function generateCertificatePdfBytes(options: GeneratePdfOptions): 
     const value = getFieldValue(fieldConfig, fieldValues);
     if (!value) continue;
 
-    const font = await getFont(pdfDoc, fieldConfig.font_family, fieldConfig.font_weight);
+    const font = await getFont(pdfDoc, fieldConfig.font_family, fieldConfig.font_weight, value);
     const fontSize = fieldConfig.font_size * scaleX; // scale font size proportionally
     const textColor = hexToRgb(fieldConfig.color);
 
