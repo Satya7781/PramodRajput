@@ -64,7 +64,7 @@ export default function EventsPage() {
 
   /* Load live events on mount */
   useEffect(() => {
-    fetch('/api/events?status=ongoing,upcoming&limit=20')
+    fetch('/api/events?status=ongoing,upcoming,completed&limit=20')
       .then(r => r.ok ? r.json() : [])
       .then(d => { setLiveEvents(Array.isArray(d) ? d : []); setLiveLoading(false); })
       .catch(() => setLiveLoading(false));
@@ -108,6 +108,7 @@ export default function EventsPage() {
     const s = e.start_date ? new Date(e.start_date) : null;
     return s && now < s;
   });
+  const past = liveEvents.filter(e => e.status === 'completed');
 
   return (
     <div className="flex flex-col">
@@ -189,6 +190,21 @@ export default function EventsPage() {
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                       {upcoming.map((ev, i) => (
+                        <EventCard key={ev.id} event={ev} lang={lang} t={t} index={i} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Past */}
+                {past.length > 0 && (
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold mb-5 flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                      {t('events', 'past')}
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                      {past.map((ev, i) => (
                         <EventCard key={ev.id} event={ev} lang={lang} t={t} index={i} />
                       ))}
                     </div>
