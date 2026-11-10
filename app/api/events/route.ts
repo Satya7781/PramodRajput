@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
       const STATUS_MAP: Record<string, string[]> = {
         ongoing:  ['registration_open', 'published'],
         upcoming: ['registration_open', 'published'],
+        past:    ['registration_closed', 'completed', 'cancelled'],
         published:['published'],
         completed:['completed'],
       };

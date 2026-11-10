@@ -19,7 +19,7 @@ export default function HomePage() {
 
   useEffect(() => {
     Promise.allSettled([
-      fetch('/api/events?limit=3').then(r => r.ok ? r.json() : []),
+      fetch('/api/events?status=upcoming&limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/news?limit=3').then(r => r.ok ? r.json() : []),
     ]).then(([ev, nw]) => {
       setEvents(ev.status === 'fulfilled' && Array.isArray(ev.value) ? ev.value : []);
