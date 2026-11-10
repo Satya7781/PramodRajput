@@ -14,6 +14,7 @@ import { Loader2, Save, Upload, Languages, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import { slugify } from '@/lib/date-utils';
 import { useAutoTranslate } from '@/lib/use-translate';
+import { useLanguage } from '@/lib/i18n';
 
 type EventStatus = Event['status'];
 
@@ -54,6 +55,7 @@ export function EventForm({ event }: EventFormProps) {
   const [saving, setSaving] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const { autoTranslate, translating } = useAutoTranslate();
+  const { t } = useLanguage();
 
   // Load available certificate templates
   useEffect(() => {
@@ -67,19 +69,19 @@ export function EventForm({ event }: EventFormProps) {
 
   const handleBannerUpload = async (file: File) => {
     const token = getAuthToken();
-    if (!token) { toast.error('Not authenticated.'); return; }
+    if (!token) { toast.error(t('admin', 'notAuthenticated')); return; }
     setUploadingBanner(true);
     try {
       const result = await uploadToCloudinary(file, token, 'events');
       setBannerUrl(result.url);
-      toast.success('Banner uploaded successfully.');
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Upload failed.'); }
+      toast.success(t('admin', 'uploadSuccess'));
+    } catch (e) { toast.error(e instanceof Error ? e.message : t('admin', 'uploadFailed')); }
     finally { setUploadingBanner(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !slug.trim()) { toast.error('Title and slug are required.'); return; }
+    if (!title.trim() || !slug.trim()) { toast.error(t('admin', 'titleSlugRequired')); return; }
     setSaving(true);
 
     const payload = {
@@ -105,15 +107,15 @@ export function EventForm({ event }: EventFormProps) {
     try {
       if (isEdit) {
         await eventsApi.update(event.id, payload);
-        toast.success('Event updated successfully.');
+        toast.success(t('admin', 'eventUpdated'));
       } else {
         const created = await eventsApi.create(payload);
-        toast.success('Event created successfully.');
+        toast.success(t('admin', 'eventCreated'));
         router.push(`/admin/dashboard/events/${(created as Event).id}`);
         return;
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Something went wrong.');
+      toast.error(err instanceof Error ? err.message : t('admin', 'requestFailed'));
     } finally {
       setSaving(false);
     }
@@ -123,7 +125,7 @@ export function EventForm({ event }: EventFormProps) {
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Basic Info */}
       <div className="rounded-xl border border-border bg-card p-6 space-y-5">
-        <h2 className="font-semibold text-base">Basic Information</h2>
+        <h2 className="font-semibold text-base">{t('common', 'basicInformation')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="title">Event Title <span className="text-destructive">*</span></Label>

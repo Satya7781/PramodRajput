@@ -97,7 +97,7 @@ export function SiteHeader() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[999] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:text-sm focus:font-semibold focus:shadow-lg"
       >
-        Skip to main content
+        {t('common', 'skipToContent')}
       </a>
 
       <header className={cn(
@@ -120,7 +120,7 @@ export function SiteHeader() {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1" aria-label="Main navigation">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1" aria-label={t('common', 'mainNavigation')}>
             {navLinks.map((link) => {
               const active = isActive(link.href);
               return (
@@ -147,7 +147,8 @@ export function SiteHeader() {
             {/* Lang toggle */}
             <button
               onClick={toggleLang}
-              aria-label={lang === 'hi' ? 'Switch to English' : 'हिंदी में बदलें'}
+              aria-label={lang === 'hi' ? t('common', 'switchToEnglish') : t('common', 'switchToHindi')}
+              aria-pressed={lang === 'en'}
               className="flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-3 py-1.5 text-xs font-semibold hover:bg-muted active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <Languages className="h-3.5 w-3.5 shrink-0" />
@@ -158,7 +159,7 @@ export function SiteHeader() {
             <button
               className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-muted/40 hover:bg-muted active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               onClick={() => setMobileOpen(o => !o)}
-              aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-label={mobileOpen ? t('common', 'closeMenu') : t('common', 'openMenu')}
               aria-expanded={mobileOpen}
               aria-controls="mobile-drawer"
             >
@@ -183,7 +184,7 @@ export function SiteHeader() {
         ref={drawerRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Navigation menu"
+        aria-label={t('common', 'navigationMenu')}
         aria-hidden={!mobileOpen}
         onKeyDown={handleDrawerKeyDown}
         className={cn(

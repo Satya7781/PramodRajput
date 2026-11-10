@@ -110,7 +110,7 @@ export function SiteFooter() {
           {/* Copyright row */}
           <div className="flex items-center justify-center">
             <p className="text-xs text-muted-foreground text-center">
-              All rights reserved by{' '}
+              {t('footer', 'rightsBy')}{' '}
               <a
                 href="https://satyachouhan.me"
                 target="_blank"

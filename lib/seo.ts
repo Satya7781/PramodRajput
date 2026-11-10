@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
+import { isLocale, type Locale } from '@/lib/locale';
 
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'Pramod Rajput';
 
@@ -45,18 +47,30 @@ export function contentMetadata({
 }): Metadata {
   const descriptionText = cleanDescription(description);
   const imageUrl = contentImageUrl(image);
-  const pageUrl = absoluteUrl(path);
+  const requestedLocale = headers().get('x-locale');
+  const locale: Locale = isLocale(requestedLocale) ? requestedLocale : 'hi';
+  const localizedPath = `/${locale}${path === '/' ? '/' : path}`;
+  const pageUrl = absoluteUrl(localizedPath);
+  const alternatePath = (alternateLocale: Locale) => absoluteUrl(`/${alternateLocale}${path === '/' ? '/' : path}`);
 
   return {
     title,
     description: descriptionText,
-    alternates: { canonical: pageUrl },
+    alternates: {
+      canonical: pageUrl,
+      languages: {
+        hi: alternatePath('hi'),
+        en: alternatePath('en'),
+        'x-default': alternatePath('hi'),
+      },
+    },
     openGraph: {
       title,
       description: descriptionText,
       url: pageUrl,
       siteName: SITE_NAME,
       type,
+      locale: locale === 'hi' ? 'hi_IN' : 'en_IN',
       images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
       ...(publishedTime ? { publishedTime } : {}),
     },

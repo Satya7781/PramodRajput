@@ -21,32 +21,34 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n';
 
 const adminNav = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/dashboard/events', label: 'Events', icon: CalendarDays },
-  { href: '/admin/dashboard/event-gallery', label: 'Event Gallery', icon: GalleryHorizontal },
-  { href: '/admin/dashboard/memories', label: 'Memories', icon: BookOpen },
-  { href: '/admin/dashboard/registrations', label: 'Registrations', icon: ClipboardList },
-  { href: '/admin/dashboard/certificates', label: 'Certificates', icon: Award },
-  { href: '/admin/dashboard/certificate-templates', label: 'Cert. Templates', icon: FileImage },
-  { href: '/admin/dashboard/news', label: 'News', icon: Newspaper },
-  { href: '/admin/dashboard/users', label: 'Users', icon: Users },
-  { href: '/admin/dashboard/settings', label: 'Settings', icon: Settings },
-  { href: '/admin/dashboard/audit-logs', label: 'Audit Logs', icon: ScrollText },
+  { href: '/admin/dashboard', key: 'dashboard', icon: LayoutDashboard },
+  { href: '/admin/dashboard/events', key: 'events', icon: CalendarDays },
+  { href: '/admin/dashboard/event-gallery', key: 'eventGallery', icon: GalleryHorizontal },
+  { href: '/admin/dashboard/memories', key: 'memories', icon: BookOpen },
+  { href: '/admin/dashboard/registrations', key: 'registrations', icon: ClipboardList },
+  { href: '/admin/dashboard/certificates', key: 'certificates', icon: Award },
+  { href: '/admin/dashboard/certificate-templates', key: 'templates', icon: FileImage },
+  { href: '/admin/dashboard/news', key: 'news', icon: Newspaper },
+  { href: '/admin/dashboard/users', key: 'users', icon: Users },
+  { href: '/admin/dashboard/settings', key: 'settings', icon: Settings },
+  { href: '/admin/dashboard/audit-logs', key: 'auditLogs', icon: ScrollText },
 ];
 
 const editorNav = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/dashboard/event-gallery', label: 'Event Gallery', icon: GalleryHorizontal },
-  { href: '/admin/dashboard/memories', label: 'Memories', icon: BookOpen },
-  { href: '/admin/dashboard/news', label: 'News', icon: Newspaper },
+  { href: '/admin/dashboard', key: 'dashboard', icon: LayoutDashboard },
+  { href: '/admin/dashboard/event-gallery', key: 'eventGallery', icon: GalleryHorizontal },
+  { href: '/admin/dashboard/memories', key: 'memories', icon: BookOpen },
+  { href: '/admin/dashboard/news', key: 'news', icon: Newspaper },
 ];
 
 export function AdminSidebar({ userRole }: { userRole: 'admin' | 'editor' }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { signOut } = useAuth();
+  const { t } = useLanguage();
   const nav = userRole === 'admin' ? adminNav : editorNav;
 
   const isActive = (href: string) => {
@@ -60,7 +62,7 @@ export function AdminSidebar({ userRole }: { userRole: 'admin' | 'editor' }) {
       <button
         className="lg:hidden fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card"
         onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label="Toggle sidebar"
+        aria-label={t('admin', 'toggleSidebar')}
       >
         {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -102,7 +104,7 @@ export function AdminSidebar({ userRole }: { userRole: 'admin' | 'editor' }) {
                 onClick={() => setMobileOpen(false)}
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                {t('admin', item.key)}
               </Link>
             ))}
           </nav>
@@ -113,7 +115,7 @@ export function AdminSidebar({ userRole }: { userRole: 'admin' | 'editor' }) {
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
               <LogOut className="h-4 w-4" />
-              Sign Out
+              {t('admin', 'signOut')}
             </button>
           </div>
         </div>

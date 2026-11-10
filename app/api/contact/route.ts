@@ -1,10 +1,12 @@
 import { NextRequest } from 'next/server';
 import { ok, err } from '@/lib/api-helpers';
 import { query } from '@/lib/db';
+import { getRequestLocale, localizedError } from '@/lib/request-locale';
 
 // POST /api/contact — public: save a contact form submission
 export async function POST(req: NextRequest) {
   try {
+    const locale = getRequestLocale(req);
     const body = await req.json();
     const { name, email, subject, message } = body as {
       name: string;
@@ -13,18 +15,18 @@ export async function POST(req: NextRequest) {
       message: string;
     };
 
-    if (!name?.trim())    return err('Name is required');
-    if (!email?.trim())   return err('Email is required');
-    if (!message?.trim()) return err('Message is required');
+    if (!name?.trim())    return err(localizedError(locale, 'name'));
+    if (!email?.trim())   return err(localizedError(locale, 'email'));
+    if (!message?.trim()) return err(localizedError(locale, 'message'));
 
     // Basic email format check
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return err('Please enter a valid email address');
+      return err(localizedError(locale, 'emailFormat'));
     }
 
     // Minimum message length
     if (message.trim().length < 10) {
-      return err('Message must be at least 10 characters');
+      return err(localizedError(locale, 'messageLength'));
     }
 
     // Persist to DB — create table if it doesn't exist (migration-safe)
@@ -49,6 +51,7 @@ export async function POST(req: NextRequest) {
     return ok({ success: true });
   } catch (e) {
     console.error('POST /api/contact error:', e);
-    return err('Failed to send message. Please try again.', 500);
+    const locale = getRequestLocale(req);
+    return err(localizedError(locale, 'generic'), 500);
   }
 }

@@ -1,8 +1,10 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { DEFAULT_LOCALE, localeFromPathname, localizedPath, type Locale } from '@/lib/locale';
 
-export type Lang = 'hi' | 'en';
+export type Lang = Locale;
 
 export const translations = {
   nav: {
@@ -39,6 +41,9 @@ export const translations = {
     location:       { hi: 'स्थान',               en: 'Location' },
     status:         { hi: 'स्थिति',              en: 'Status' },
     search:         { hi: 'खोजें',               en: 'Search' },
+    notifications:  { hi: 'सूचनाएँ',              en: 'Notifications' },
+    basicInformation: { hi: 'मूल जानकारी',        en: 'Basic Information' },
+    translationFallback: { hi: 'अनुवाद उपलब्ध नहीं; मूल भाषा दिखाई जा रही है', en: 'Translation unavailable; showing original language' },
     published:      { hi: 'प्रकाशित',             en: 'Published' },
     draft:          { hi: 'मसौदा',               en: 'Draft' },
     viewMemory:     { hi: 'यादें देखें',           en: 'View Memory' },
@@ -48,6 +53,13 @@ export const translations = {
     watchVideos:    { hi: 'वीडियो देखें',           en: 'Watch Videos' },
     stayConnected:  { hi: 'जुड़े रहें',             en: 'Stay Connected' },
     followSocial:   { hi: 'नवीनतम अपडेट के लिए सोशल मीडिया पर फ़ॉलो करें', en: 'Follow us on social media for the latest updates' },
+    skipToContent:  { hi: 'मुख्य सामग्री पर जाएँ',   en: 'Skip to main content' },
+    mainNavigation: { hi: 'मुख्य नेविगेशन',         en: 'Main navigation' },
+    navigationMenu: { hi: 'नेविगेशन मेनू',          en: 'Navigation menu' },
+    openMenu:       { hi: 'नेविगेशन मेनू खोलें',     en: 'Open navigation menu' },
+    closeMenu:      { hi: 'नेविगेशन मेनू बंद करें',  en: 'Close navigation menu' },
+    switchToEnglish:{ hi: 'अंग्रेज़ी में बदलें',     en: 'Switch to English' },
+    switchToHindi:  { hi: 'हिंदी में बदलें',        en: 'Switch to Hindi' },
     yearsOfService: { hi: 'सेवा के वर्ष',           en: 'Years of Service' },
     events_count:   { hi: 'प्रमुख सामाजिक आयोजन',  en: 'Key Social Events' },
     kaviCount:      { hi: 'कवि सम्मेलन (वर्ष)',    en: 'Kavi Sammelans (Years)' },
@@ -371,37 +383,91 @@ export const translations = {
     photoGallery:{ hi: 'फ़ोटो गैलरी',                         en: 'Photo Gallery' },
     verifyCert:  { hi: 'प्रमाण पत्र सत्यापित करें',           en: 'Verify Certificate' },
     rights:      { hi: 'सर्वाधिकार सुरक्षित।',               en: 'All rights reserved.' },
+    rightsBy:    { hi: 'सर्वाधिकार सुरक्षित —',               en: 'All rights reserved by' },
     builtWith:   { hi: 'समुदाय के लिए समर्पण के साथ बनाया गया।', en: 'Built with dedication for the community.' },
-    devLabel:    { hi: 'वेबसाइट डेवलपर', en: 'Website Developer' },
-    devQuote:    { hi: 'आपका सपना, हमारी कोड — हर विचार को डिजिटल हकीकत बनाते हैं।', en: 'Your vision, our code — we turn every idea into digital reality.' },
+  },
+  admin: {
+    dashboard:      { hi: 'डैशबोर्ड', en: 'Dashboard' },
+    eventGallery:   { hi: 'कार्यक्रम गैलरी', en: 'Event Gallery' },
+    memories:       { hi: 'यादें', en: 'Memories' },
+    registrations:  { hi: 'पंजीकरण', en: 'Registrations' },
+    certificates:   { hi: 'प्रमाण पत्र', en: 'Certificates' },
+    templates:      { hi: 'प्रमाण पत्र टेम्पलेट', en: 'Cert. Templates' },
+    news:           { hi: 'समाचार', en: 'News' },
+    users:          { hi: 'उपयोगकर्ता', en: 'Users' },
+    settings:       { hi: 'सेटिंग्स', en: 'Settings' },
+    auditLogs:      { hi: 'ऑडिट लॉग', en: 'Audit Logs' },
+    signOut:        { hi: 'साइन आउट', en: 'Sign Out' },
+    toggleSidebar:  { hi: 'साइडबार बदलें', en: 'Toggle sidebar' },
+    welcome:        { hi: 'वापसी पर स्वागत है, {name}', en: 'Welcome back, {name}' },
+    overview:       { hi: 'यह आपके प्लेटफ़ॉर्म का संक्षिप्त विवरण है।', en: "Here's an overview of your platform." },
+    totalEvents:    { hi: 'कुल कार्यक्रम', en: 'Total Events' },
+    activeEvents:   { hi: 'सक्रिय कार्यक्रम', en: 'Active Events' },
+    totalRegistrations: { hi: 'कुल पंजीकरण', en: 'Total Registrations' },
+    pendingRegistrations: { hi: 'लंबित पंजीकरण', en: 'Pending Registrations' },
+    certificatesIssued: { hi: 'जारी प्रमाण पत्र', en: 'Certificates Issued' },
+    memoriesPublished: { hi: 'प्रकाशित यादें', en: 'Memories Published' },
+    newsArticles:   { hi: 'समाचार लेख', en: 'News Articles' },
+    recentActivity: { hi: 'हाल की गतिविधि', en: 'Recent Activity' },
+    noRecentActivity: { hi: 'हाल की कोई गतिविधि नहीं।', en: 'No recent activity.' },
+    system:         { hi: 'सिस्टम', en: 'System' },
+    notAuthenticated: { hi: 'प्रमाणीकरण आवश्यक है।', en: 'Not authenticated.' },
+    uploadSuccess:  { hi: 'बैनर सफलतापूर्वक अपलोड हुआ।', en: 'Banner uploaded successfully.' },
+    uploadFailed:   { hi: 'अपलोड विफल रहा।', en: 'Upload failed.' },
+    titleSlugRequired: { hi: 'शीर्षक और स्लग आवश्यक हैं।', en: 'Title and slug are required.' },
+    eventUpdated:   { hi: 'कार्यक्रम सफलतापूर्वक अपडेट हुआ।', en: 'Event updated successfully.' },
+    eventCreated:   { hi: 'कार्यक्रम सफलतापूर्वक बनाया गया।', en: 'Event created successfully.' },
+    requestFailed:  { hi: 'कुछ गलत हो गया।', en: 'Something went wrong.' },
   },
 } as const;
 
 interface LangContextValue {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (section: keyof typeof translations, key: string) => string;
+  t: (section: keyof typeof translations, key: string, values?: Record<string, string | number>) => string;
 }
 
 const LangContext = createContext<LangContextValue | undefined>(undefined);
 const STORAGE_KEY = 'pr_lang';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>('hi');
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const routeLocale = localeFromPathname(pathname);
+  const [lang, setLangState] = useState<Lang>(routeLocale ?? DEFAULT_LOCALE);
 
   useEffect(() => {
     const saved = (typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null) as Lang | null;
-    if (saved === 'hi' || saved === 'en') setLangState(saved);
-  }, []);
+    if (routeLocale) {
+      setLangState(routeLocale);
+      localStorage.setItem(STORAGE_KEY, routeLocale);
+    } else if (saved === 'hi' || saved === 'en') {
+      setLangState(saved);
+    }
+  }, [routeLocale]);
+
+  useEffect(() => {
+    document.documentElement.lang = lang === 'hi' ? 'hi-IN' : 'en';
+    document.documentElement.dir = 'ltr';
+  }, [lang]);
 
   const setLang = (l: Lang) => {
     setLangState(l);
     if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, l);
+    if (pathname) {
+      const query = searchParams.toString();
+      const target = localizedPath(pathname, l);
+      router.push(query ? `${target}?${query}` : target);
+    }
   };
 
-  const t = (section: keyof typeof translations, key: string): string => {
+  const t = (section: keyof typeof translations, key: string, values?: Record<string, string | number>): string => {
     const sec = translations[section] as Record<string, { hi: string; en: string }>;
-    return sec?.[key]?.[lang] ?? key;
+    const text = sec?.[key]?.[lang] ?? sec?.[key]?.hi ?? key;
+    return values
+      ? text.replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? `{${name}}`))
+      : text;
   };
 
   return (
@@ -417,7 +483,10 @@ export function useLanguage() {
   return ctx;
 }
 
-export function tx(section: keyof typeof translations, key: string, lang: Lang = 'hi'): string {
+export function tx(section: keyof typeof translations, key: string, lang: Lang = 'hi', values?: Record<string, string | number>): string {
   const sec = translations[section] as Record<string, { hi: string; en: string }>;
-  return sec?.[key]?.[lang] ?? key;
+  const text = sec?.[key]?.[lang] ?? sec?.[key]?.hi ?? key;
+  return values
+    ? text.replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? `{${name}}`))
+    : text;
 }

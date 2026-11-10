@@ -42,6 +42,9 @@ export interface Event {
   certificate_enabled: boolean;
   certificate_template_id: string | null;
   status: EventStatus;
+  title_en?: string | null;
+  short_description_en?: string | null;
+  description_en?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -129,6 +132,9 @@ export interface News {
   created_at: string;
   updated_at: string;
   news_categories?: NewsCategory | null;
+  title_en?: string | null;
+  excerpt_en?: string | null;
+  content_en?: string | null;
 }
 
 export interface PhotoAlbum {

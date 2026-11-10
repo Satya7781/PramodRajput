@@ -5,6 +5,7 @@ import { stats as statsApi, auditLogs } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { CalendarDays, ClipboardList, Award, Newspaper, Users, TrendingUp, Loader2, BookOpen } from 'lucide-react';
 import { formatDate } from '@/lib/date-utils';
+import { useLanguage } from '@/lib/i18n';
 
 interface DashboardStats {
   totalEvents: number; activeEvents: number;
@@ -19,6 +20,7 @@ interface RecentActivity {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,20 +48,20 @@ export default function DashboardPage() {
   }
 
   const statCards = [
-    { label: 'Total Events',          value: stats?.totalEvents || 0,           icon: CalendarDays,  color: 'text-primary' },
-    { label: 'Active Events',         value: stats?.activeEvents || 0,          icon: TrendingUp,    color: 'text-secondary' },
-    { label: 'Total Registrations',   value: stats?.totalRegistrations || 0,    icon: ClipboardList, color: 'text-primary' },
-    { label: 'Pending Registrations', value: stats?.pendingRegistrations || 0,  icon: ClipboardList, color: 'text-accent' },
-    { label: 'Certificates Issued',   value: stats?.certificatesGenerated || 0, icon: Award,         color: 'text-secondary' },
-    { label: 'Memories Published',    value: stats?.memories || 0,              icon: BookOpen,      color: 'text-primary' },
-    { label: 'News Articles',         value: stats?.newsArticles || 0,          icon: Newspaper,     color: 'text-primary' },
+    { label: t('admin', 'totalEvents'),          value: stats?.totalEvents || 0,           icon: CalendarDays,  color: 'text-primary' },
+    { label: t('admin', 'activeEvents'),         value: stats?.activeEvents || 0,          icon: TrendingUp,    color: 'text-secondary' },
+    { label: t('admin', 'totalRegistrations'),   value: stats?.totalRegistrations || 0,    icon: ClipboardList, color: 'text-primary' },
+    { label: t('admin', 'pendingRegistrations'), value: stats?.pendingRegistrations || 0,  icon: ClipboardList, color: 'text-accent' },
+    { label: t('admin', 'certificatesIssued'),   value: stats?.certificatesGenerated || 0, icon: Award,         color: 'text-secondary' },
+    { label: t('admin', 'memoriesPublished'),    value: stats?.memories || 0,              icon: BookOpen,      color: 'text-primary' },
+    { label: t('admin', 'newsArticles'),         value: stats?.newsArticles || 0,          icon: Newspaper,     color: 'text-primary' },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Welcome back, {user?.full_name?.split(' ')[0] || 'Admin'}</h1>
-        <p className="text-muted-foreground text-sm mt-1">Here&apos;s an overview of your platform.</p>
+        <h1 className="text-2xl font-bold">{t('admin', 'welcome', { name: user?.full_name?.split(' ')[0] || t('admin', 'dashboard') })}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t('admin', 'overview')}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -78,7 +80,7 @@ export default function DashboardPage() {
 
       <div className="rounded-xl border border-border bg-card">
         <div className="border-b border-border p-5">
-          <h2 className="font-semibold">Recent Activity</h2>
+          <h2 className="font-semibold">{t('admin', 'recentActivity')}</h2>
         </div>
         {recentActivity.length > 0 ? (
           <div className="divide-y divide-border">
@@ -90,7 +92,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{activity.action.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}</p>
-                    <p className="text-xs text-muted-foreground">{activity.user_name || 'System'}</p>
+                    <p className="text-xs text-muted-foreground">{activity.user_name || t('admin', 'system')}</p>
                   </div>
                 </div>
                 <span className="text-xs text-muted-foreground">{formatDate(activity.created_at)}</span>
@@ -98,7 +100,7 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="p-8 text-center text-sm text-muted-foreground">No recent activity.</div>
+          <div className="p-8 text-center text-sm text-muted-foreground">{t('admin', 'noRecentActivity')}</div>
         )}
       </div>
     </div>

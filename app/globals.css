@@ -65,6 +65,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: Inter, "Noto Sans Devanagari", "Hind", Arial, sans-serif;
     /* Better mobile text sizing */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
