@@ -7,6 +7,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const year = searchParams.get('year');
+    const all = searchParams.get('all') === '1';
+    const limit = searchParams.get('limit');
 
     if (year) {
       const events = await query(
@@ -19,6 +21,27 @@ export async function GET(req: NextRequest) {
          GROUP BY ge.id
          ORDER BY ge.sort_order ASC, ge.created_at ASC`,
         [parseInt(year)]
+      );
+      return ok(events);
+    }
+
+    if (all) {
+      const params: unknown[] = [];
+      let limitSql = '';
+      if (limit) {
+        limitSql = ` LIMIT $1`;
+        params.push(parseInt(limit, 10));
+      }
+
+      const events = await query(
+        `SELECT ge.*,
+                COUNT(gm.id) FILTER (WHERE gm.media_type = 'photo') AS photo_count,
+                COUNT(gm.id) FILTER (WHERE gm.media_type = 'video') AS video_count
+         FROM gallery_events ge
+         LEFT JOIN gallery_media gm ON gm.event_id = ge.id
+         GROUP BY ge.id
+         ORDER BY ge.year DESC, ge.sort_order ASC, ge.created_at DESC${limitSql}`,
+        params
       );
       return ok(events);
     }

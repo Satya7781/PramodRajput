@@ -11,11 +11,23 @@ import type { Event, EventMemory, News } from '@/lib/types';
 import { useLanguage } from '@/lib/i18n';
 import { formatDate } from '@/lib/date-utils';
 
+interface HomeGalleryEvent {
+  id: string;
+  year: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  cover_url: string | null;
+  photo_count: number;
+  video_count: number;
+}
+
 export default function HomePage() {
   const { lang, t } = useLanguage();
   const [events, setEvents] = useState<Event[]>([]);
   const [pastEvents, setPastEvents] = useState<Event[]>([]);
   const [memories, setMemories] = useState<EventMemory[]>([]);
+  const [galleryEvents, setGalleryEvents] = useState<HomeGalleryEvent[]>([]);
   const [news, setNews]     = useState<News[]>([]);
   const [ready, setReady]   = useState(false);
 
@@ -24,11 +36,13 @@ export default function HomePage() {
       fetch('/api/events?status=upcoming&limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/events?status=past&limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/memories?limit=3').then(r => r.ok ? r.json() : []),
+      fetch('/api/gallery-events?all=1&limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/news?limit=3').then(r => r.ok ? r.json() : []),
-    ]).then(([ev, past, mem, nw]) => {
+    ]).then(([ev, past, mem, gallery, nw]) => {
       setEvents(ev.status === 'fulfilled' && Array.isArray(ev.value) ? ev.value : []);
       setPastEvents(past.status === 'fulfilled' && Array.isArray(past.value) ? past.value : []);
       setMemories(mem.status === 'fulfilled' && Array.isArray(mem.value) ? mem.value : []);
+      setGalleryEvents(gallery.status === 'fulfilled' && Array.isArray(gallery.value) ? gallery.value : []);
       setNews(nw.status === 'fulfilled' && Array.isArray(nw.value) ? nw.value : []);
       setReady(true);
     });
@@ -260,7 +274,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Past Events ── */}
-      {(!ready || memories.length > 0 || pastEvents.length > 0) && (
+      {(!ready || memories.length > 0 || pastEvents.length > 0 || galleryEvents.length > 0) && (
         <section className="py-14 sm:py-20 bg-muted/30">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-end justify-between mb-8 sm:mb-10 gap-4">
@@ -268,7 +282,7 @@ export default function HomePage() {
                 <span className="text-xs sm:text-sm font-bold text-primary uppercase tracking-widest">{t('home', 'pastEventsTag')}</span>
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black mt-2">{t('home', 'pastEventsTitle')}</h2>
               </div>
-              <Link href="/memories" className="hidden sm:inline-flex items-center gap-1.5 text-primary font-semibold text-sm hover:gap-2.5 transition-all shrink-0">
+              <Link href="/events" className="hidden sm:inline-flex items-center gap-1.5 text-primary font-semibold text-sm hover:gap-2.5 transition-all shrink-0">
                 {t('common', 'viewAll')} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -291,6 +305,7 @@ export default function HomePage() {
                 {[
                   ...memories.map(memory => ({ kind: 'memory' as const, date: memory.event_date, memory })),
                   ...pastEvents.map(event => ({ kind: 'event' as const, date: event.end_date || event.start_date, event })),
+                  ...galleryEvents.map(event => ({ kind: 'gallery' as const, date: `${event.year}-12-31`, event })),
                 ]
                   .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
                   .slice(0, 3)
@@ -328,7 +343,7 @@ export default function HomePage() {
                       <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.memory.title}</h3>
                     </div>
                   </Link>
-                  ) : (
+                  ) : item.kind === 'event' ? (
                     <Link
                       key={`event-${item.event.id}`}
                       href={`/events/${encodeURIComponent(item.event.slug)}`}
@@ -348,12 +363,45 @@ export default function HomePage() {
                         <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.event.title}</h3>
                       </div>
                     </Link>
+                  ) : (
+                    <Link
+                      key={`gallery-${item.event.id}`}
+                      href={`/events/${encodeURIComponent(item.event.slug)}`}
+                      className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
+                      style={{ animationDelay: `${i * 80}ms` }}
+                    >
+                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                        {item.event.cover_url
+                          ? <img src={item.event.cover_url} alt={item.event.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                          : <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-10 w-10 text-muted-foreground/40" /></div>}
+                        {(Number(item.event.photo_count) > 0 || Number(item.event.video_count) > 0) && (
+                          <div className="absolute bottom-2.5 right-2.5 flex gap-1.5">
+                            {Number(item.event.photo_count) > 0 && (
+                              <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
+                                <Camera className="h-3 w-3" />{item.event.photo_count}
+                              </span>
+                            )}
+                            {Number(item.event.video_count) > 0 && (
+                              <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
+                                <Video className="h-3 w-3" />{item.event.video_count}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4 sm:p-5">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2.5">
+                          <Calendar className="h-3 w-3" />{item.event.year}
+                        </div>
+                        <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.event.name}</h3>
+                      </div>
+                    </Link>
                   ))}
               </div>
             )}
 
             <div className="mt-6 text-center sm:hidden">
-              <Link href="/memories" className="inline-flex items-center gap-2 text-primary font-semibold text-sm">
+              <Link href="/events" className="inline-flex items-center gap-2 text-primary font-semibold text-sm">
                 {t('common', 'viewAll')} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

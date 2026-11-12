@@ -96,20 +96,20 @@ export default function EventGalleryAdminPage() {
     setOpenYear(year); loadYearEvents(year); setNewEventYear(null);
   };
 
-  const handleCreateEvent = async () => {
-    if (!newEventYear || !newEventName.trim()) { setEventError('Name is required'); return; }
+  const handleCreateEvent = async (year: number) => {
+    if (!newEventName.trim()) { setEventError('Name is required'); return; }
     setSavingEvent(true); setEventError('');
     try {
       const res = await fetch('/api/gallery-events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
-        body: JSON.stringify({ year: newEventYear, name: newEventName.trim(), slug: newEventSlug || slugify(newEventName), description: newEventDesc || null }),
+        body: JSON.stringify({ year, name: newEventName.trim(), slug: newEventSlug || slugify(newEventName), description: newEventDesc || null }),
       });
       const data = await res.json();
       if (!res.ok) { setEventError(data.error ?? 'Failed'); return; }
       setYearEvents(prev => {
-        const existing = prev[newEventYear] ?? [];
-        return { ...prev, [newEventYear]: [...existing, { ...data, photo_count: '0', video_count: '0' }] };
+        const existing = prev[year] ?? [];
+        return { ...prev, [year]: [...existing, { ...data, photo_count: '0', video_count: '0' }] };
       });
       setNewEventName(''); setNewEventSlug(''); setNewEventDesc(''); setNewEventYear(null);
     } finally { setSavingEvent(false); }
@@ -360,7 +360,7 @@ export default function EventGalleryAdminPage() {
                       />
                     </div>
                     {eventError && newEventYear === year && <p className="text-xs text-destructive mt-2">{eventError}</p>}
-                    <button onClick={() => { setNewEventYear(year); handleCreateEvent(); }} disabled={savingEvent}
+                    <button onClick={() => handleCreateEvent(year)} disabled={savingEvent}
                       className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
                     >
                       {savingEvent && newEventYear === year ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
