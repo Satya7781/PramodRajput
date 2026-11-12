@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { queryOne } from '@/lib/db';
 import { contentMetadata } from '@/lib/seo';
 
@@ -49,6 +48,5 @@ export default async function NewsArticleLayout({
   children: React.ReactNode;
   params: { slug: string };
 }): Promise<JSX.Element> {
-  if (!await getArticle(params.slug)) notFound();
   return <>{children}</>;
 }

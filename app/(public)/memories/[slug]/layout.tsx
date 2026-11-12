@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { queryOne } from '@/lib/db';
 import { contentMetadata } from '@/lib/seo';
 
@@ -49,6 +48,5 @@ export default async function MemoryDetailLayout({
   children: React.ReactNode;
   params: { slug: string };
 }): Promise<JSX.Element> {
-  if (!await getMemory(params.slug)) notFound();
   return <>{children}</>;
 }

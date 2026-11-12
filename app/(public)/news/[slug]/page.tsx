@@ -33,7 +33,6 @@ export default function NewsArticlePage() {
 
     async function load() {
       try {
-        // Do NOT encodeURIComponent — Next.js already encodes route params
         const res = await fetch(`/api/news?slug=${encodeURIComponent(params.slug)}`);
         const arr: News[] = res.ok ? await res.json() : [];
         const found = Array.isArray(arr) ? (arr[0] ?? null) : null;

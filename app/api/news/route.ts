@@ -3,11 +3,21 @@ import { ok, err, requireEditor, isResponse, writeAuditLog } from '@/lib/api-hel
 import { query, queryOne } from '@/lib/db';
 import { translateBatch, isHindi } from '@/lib/translate';
 
+function normalizeSlug(value: string): string {
+  let slug = value;
+  try { slug = decodeURIComponent(slug); } catch { /* keep the original value */ }
+  if (slug.includes('%')) {
+    try { slug = decodeURIComponent(slug); } catch { /* keep the first decode */ }
+  }
+  return slug;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const adminMode = searchParams.get('admin') === '1';
-    const slug = searchParams.get('slug');
+    const rawSlug = searchParams.get('slug');
+    const slug = rawSlug ? normalizeSlug(rawSlug) : null;
     const status = searchParams.get('status');
     const categoryId = searchParams.get('category_id');
     const limitStr = searchParams.get('limit');
