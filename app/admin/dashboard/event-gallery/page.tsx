@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Plus, ChevronDown, ChevronUp, Trash2, Upload,
-  ImageIcon, Video, X, Loader2, FolderOpen, CheckCircle2, AlertCircle, Pencil, Save
+  ImageIcon, Video, X, Loader2, FolderOpen, CheckCircle2, AlertCircle, Pencil, Save, Star
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { getAuthToken } from '@/lib/api-client';
@@ -14,6 +14,7 @@ interface GalleryEvent {
   id: string; year: number; name: string; slug: string;
   description: string | null; cover_url: string | null;
   photo_count: string; video_count: string;
+  is_featured?: boolean;
 }
 interface GalleryMedia {
   id: string; event_id: string; media_type: 'photo' | 'video';
@@ -160,6 +161,24 @@ export default function EventGalleryAdminPage() {
     await fetch(`/api/gallery-events/${eventId}`, { method: 'DELETE', headers: authHeader });
     setYearEvents(prev => ({ ...prev, [year]: (prev[year] ?? []).filter(e => e.id !== eventId) }));
     if (openEventId === eventId) setOpenEventId(null);
+  };
+
+  const handleToggleFeature = async (ev: GalleryEvent, year: number) => {
+    const newVal = !ev.is_featured;
+    try {
+      const res = await fetch(`/api/gallery-events/${ev.id}/feature`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ is_featured: newVal }),
+      });
+      if (!res.ok) return;
+      setYearEvents(prev => ({
+        ...prev,
+        [year]: (prev[year] ?? []).map(e =>
+          e.id === ev.id ? { ...e, is_featured: newVal } : e
+        ),
+      }));
+    } catch { /* non-fatal */ }
   };
 
   const loadMedia = async (eventId: string) => {
@@ -439,7 +458,14 @@ export default function EventGalleryAdminPage() {
                             <button onClick={() => toggleEvent(ev.id)} className="flex-1 flex items-center gap-3 text-left min-w-0">
                               <FolderOpen className={`h-4 w-4 shrink-0 ${isEvOpen ? 'text-primary' : 'text-muted-foreground'}`} />
                               <div className="flex-1 min-w-0">
-                                <span className="font-medium text-sm truncate block">{ev.name}</span>
+                                <span className="font-medium text-sm truncate block flex items-center gap-2">
+                                  {ev.name}
+                                  {ev.is_featured && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 shrink-0">
+                                      <Star className="h-2.5 w-2.5 fill-amber-500" /> Home
+                                    </span>
+                                  )}
+                                </span>
                                 {ev.description && <span className="text-xs text-muted-foreground truncate block">{ev.description}</span>}
                               </div>
                               <div className="flex gap-2 text-xs text-muted-foreground shrink-0">
@@ -453,6 +479,13 @@ export default function EventGalleryAdminPage() {
                               title="Edit event"
                             >
                               <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleFeature(ev, year)}
+                              className={`p-1.5 rounded-lg transition-colors ${ev.is_featured ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' : 'text-muted-foreground hover:text-amber-500 hover:bg-amber-50'}`}
+                              title={ev.is_featured ? 'Remove from Home Page' : 'Show on Home Page as Past Event'}
+                            >
+                              <Star className={`h-3.5 w-3.5 ${ev.is_featured ? 'fill-amber-500' : ''}`} />
                             </button>
                             <button
                               onClick={() => handleDeleteEvent(ev.id, year)}

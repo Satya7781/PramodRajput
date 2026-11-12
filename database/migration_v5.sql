@@ -49,3 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_news_media_news_id ON news_media(news_id);
 -- ============================================================
 -- Done
 -- ============================================================
+
+-- Add is_featured to gallery_events so admin can pin past events on the homepage
+ALTER TABLE gallery_events ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS idx_gallery_events_featured ON gallery_events(is_featured) WHERE is_featured = TRUE;

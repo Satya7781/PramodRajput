@@ -382,6 +382,9 @@ export const memories = {
   update(id: string, payload: Partial<EventMemory>) {
     return apiFetch<EventMemory>(`/api/memories/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
   },
+  updateStatus(id: string, status: EventMemory['status']) {
+    return apiFetch<EventMemory>(`/api/memories/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  },
   remove(id: string) {
     return apiFetch<{ success: boolean }>(`/api/memories/${id}`, { method: 'DELETE' });
   },

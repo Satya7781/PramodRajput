@@ -75,6 +75,31 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const authResult = requireEditor(req);
+  if (isResponse(authResult)) return authResult;
+  const { user } = authResult;
+
+  try {
+    const body = await req.json();
+    const status = body.status;
+    if (!['draft', 'published', 'archived'].includes(status)) {
+      return err('Status must be draft, published, or archived');
+    }
+
+    const memory = await queryOne(
+      `UPDATE event_memories SET status=$1, updated_at=now() WHERE id=$2 RETURNING *`,
+      [status, params.id]
+    );
+    if (!memory) return err('Memory not found', 404);
+
+    await writeAuditLog(user.id, 'UPDATE_MEMORY_STATUS', 'event_memories', params.id, { status });
+    return ok(memory);
+  } catch (e) {
+    return err('Internal server error', 500);
+  }
+}
+
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const authResult = requireEditor(req);
   if (isResponse(authResult)) return authResult;

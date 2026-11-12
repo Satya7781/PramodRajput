@@ -36,7 +36,7 @@ export default function HomePage() {
       fetch('/api/events?status=upcoming&limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/events?status=past&limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/memories?limit=3').then(r => r.ok ? r.json() : []),
-      fetch('/api/gallery-events?all=1&limit=3').then(r => r.ok ? r.json() : []),
+      fetch('/api/gallery-events/featured').then(r => r.ok ? r.json() : []),
       fetch('/api/news?limit=3').then(r => r.ok ? r.json() : []),
     ]).then(([ev, past, mem, gallery, nw]) => {
       setEvents(ev.status === 'fulfilled' && Array.isArray(ev.value) ? ev.value : []);

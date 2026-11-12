@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Plus, Pencil, Trash2, Loader2, X, BookOpen,
   ChevronDown, ChevronUp, Upload, ImageIcon, Play,
-  Calendar, MapPin, Camera, Video as VideoIcon, Languages,
+  Calendar, MapPin, Camera, Video as VideoIcon, Languages, Eye, EyeOff,
 } from 'lucide-react';
 import { formatDate, slugify } from '@/lib/date-utils';
 import { toast } from 'sonner';
@@ -71,6 +71,7 @@ export default function MemoriesAdminPage() {
   const [expanded, setExpanded]     = useState<string | null>(null);
   const [mediaData, setMediaData]   = useState<Record<string, { photos: MemoryPhoto[]; videos: MemoryVideo[] }>>({});
   const [deleting, setDeleting]     = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   // Photo upload
   const [photoCaption, setPhotoCaption] = useState('');
@@ -167,6 +168,20 @@ export default function MemoriesAdminPage() {
     try { await memoriesApi.remove(id); toast.success('Memory deleted.'); fetchList(); }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Failed.'); }
     finally { setDeleting(null); }
+  };
+
+  const toggleHomeVisibility = async (memory: EventMemory) => {
+    const nextStatus = memory.status === 'published' ? 'archived' : 'published';
+    setUpdatingStatus(memory.id);
+    try {
+      await memoriesApi.updateStatus(memory.id, nextStatus);
+      toast.success(nextStatus === 'published' ? 'Memory is now visible on the home page.' : 'Memory hidden from the home page.');
+      await fetchList();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update visibility.');
+    } finally {
+      setUpdatingStatus(null);
+    }
   };
 
   // ─── Expand / load media ─────────────────────────────────────────────────────
@@ -524,6 +539,16 @@ export default function MemoriesAdminPage() {
                       title="Manage photos & videos"
                     >
                       {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => toggleHomeVisibility(memory)}
+                      disabled={updatingStatus === memory.id}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                      title={memory.status === 'published' ? 'Hide from home page' : 'Show on home page'}
+                    >
+                      {updatingStatus === memory.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : memory.status === 'published' ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                     <button
                       onClick={() => openEdit(memory)}
