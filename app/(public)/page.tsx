@@ -4,25 +4,28 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   ArrowRight, Calendar, MapPin, Users,
-  Newspaper, ImageIcon, Trophy, Heart, Target,
+  Newspaper, ImageIcon, Trophy, Heart, Target, Camera, Video,
   Facebook, Twitter, Instagram,
 } from 'lucide-react';
-import type { Event, News } from '@/lib/types';
+import type { Event, EventMemory, News } from '@/lib/types';
 import { useLanguage } from '@/lib/i18n';
 import { formatDate } from '@/lib/date-utils';
 
 export default function HomePage() {
   const { lang, t } = useLanguage();
   const [events, setEvents] = useState<Event[]>([]);
+  const [memories, setMemories] = useState<EventMemory[]>([]);
   const [news, setNews]     = useState<News[]>([]);
   const [ready, setReady]   = useState(false);
 
   useEffect(() => {
     Promise.allSettled([
       fetch('/api/events?status=upcoming&limit=3').then(r => r.ok ? r.json() : []),
+      fetch('/api/memories?limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/news?limit=3').then(r => r.ok ? r.json() : []),
-    ]).then(([ev, nw]) => {
+    ]).then(([ev, mem, nw]) => {
       setEvents(ev.status === 'fulfilled' && Array.isArray(ev.value) ? ev.value : []);
+      setMemories(mem.status === 'fulfilled' && Array.isArray(mem.value) ? mem.value : []);
       setNews(nw.status === 'fulfilled' && Array.isArray(nw.value) ? nw.value : []);
       setReady(true);
     });
@@ -252,6 +255,82 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Past Events ── */}
+      {(!ready || memories.length > 0) && (
+        <section className="py-14 sm:py-20 bg-muted/30">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-end justify-between mb-8 sm:mb-10 gap-4">
+              <div>
+                <span className="text-xs sm:text-sm font-bold text-primary uppercase tracking-widest">{t('home', 'pastEventsTag')}</span>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black mt-2">{t('home', 'pastEventsTitle')}</h2>
+              </div>
+              <Link href="/memories" className="hidden sm:inline-flex items-center gap-1.5 text-primary font-semibold text-sm hover:gap-2.5 transition-all shrink-0">
+                {t('common', 'viewAll')} <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {!ready ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
+                    <div className="aspect-[16/10] bg-muted animate-pulse" />
+                    <div className="p-4 sm:p-5 space-y-2.5">
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                      <div className="h-4 w-full bg-muted animate-pulse rounded" />
+                      <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {memories.map((memory, i) => (
+                  <Link
+                    key={memory.id}
+                    href={`/memories/${memory.slug}`}
+                    className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
+                    style={{ animationDelay: `${i * 80}ms` }}
+                  >
+                    <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                      {memory.cover_image_url
+                        ? <img src={memory.cover_image_url} alt={memory.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                        : <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-10 w-10 text-muted-foreground/40" /></div>}
+                      {(memory.photo_count ?? 0) > 0 || (memory.video_count ?? 0) > 0 ? (
+                        <div className="absolute bottom-2.5 right-2.5 flex gap-1.5">
+                          {(memory.photo_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
+                              <Camera className="h-3 w-3" />{memory.photo_count}
+                            </span>
+                          )}
+                          {(memory.video_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
+                              <Video className="h-3 w-3" />{memory.video_count}
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="p-4 sm:p-5">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2.5">
+                        {memory.event_date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{formatDate(memory.event_date, lang)}</span>}
+                        {memory.location && <span className="flex items-center gap-1 truncate max-w-[150px]"><MapPin className="h-3 w-3 shrink-0" />{memory.location}</span>}
+                      </div>
+                      <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{memory.title}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 text-center sm:hidden">
+              <Link href="/memories" className="inline-flex items-center gap-2 text-primary font-semibold text-sm">
+                {t('common', 'viewAll')} <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Latest News ── */}
       <section className="py-14 sm:py-20 bg-muted/30">

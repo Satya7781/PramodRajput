@@ -88,6 +88,8 @@ export const translations = {
     eventsTag:       { hi: 'आगामी',                             en: "What's Coming Up" },
     eventsTitle:     { hi: 'आगामी कार्यक्रम',                   en: 'Upcoming Events' },
     noEvents:        { hi: 'अभी कोई कार्यक्रम नहीं है। जल्द वापस आएं।', en: 'No upcoming events at this time. Please check back soon.' },
+    pastEventsTag:   { hi: 'पिछले कार्यक्रम',                   en: 'From the Archives' },
+    pastEventsTitle: { hi: 'पिछले कार्यक्रम',                   en: 'Past Events' },
     newsTag:         { hi: 'अपडेट रहें',                        en: 'Stay Updated' },
     newsTitle:       { hi: 'ताज़ा समाचार',                       en: 'Latest News' },
     noNews:          { hi: 'अभी कोई समाचार प्रकाशित नहीं।',      en: 'No news articles published yet.' },

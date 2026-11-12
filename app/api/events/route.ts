@@ -48,11 +48,14 @@ export async function GET(req: NextRequest) {
           sql += ` WHERE status IN ('published','registration_open','registration_closed','completed')`;
         }
 
-        // An event is only upcoming when it has not started and has not ended.
-        // This prevents published events with past dates from appearing on the homepage.
+        // For 'upcoming': only events that haven't ended yet (future or ongoing)
+        if (requested.some(r => r === 'upcoming' || r === 'ongoing')) {
+          sql += ` AND (end_date IS NULL OR end_date >= CURRENT_DATE)`;
+        }
+
+        // For strictly 'upcoming' only: also exclude already-started events
         if (requested.length === 1 && requested[0] === 'upcoming') {
-          sql += ` AND start_date > CURRENT_DATE
-                   AND (end_date IS NULL OR end_date >= CURRENT_DATE)`;
+          sql += ` AND (start_date IS NULL OR start_date >= CURRENT_DATE)`;
         }
       } else {
         sql += ` WHERE status IN ('published','registration_open','registration_closed','completed')`;
