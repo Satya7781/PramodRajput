@@ -34,7 +34,7 @@ export default function NewsArticlePage() {
     async function load() {
       try {
         // Do NOT encodeURIComponent — Next.js already encodes route params
-        const res = await fetch(`/api/news?slug=${params.slug}`);
+        const res = await fetch(`/api/news?slug=${encodeURIComponent(params.slug)}`);
         const arr: News[] = res.ok ? await res.json() : [];
         const found = Array.isArray(arr) ? (arr[0] ?? null) : null;
 
@@ -251,7 +251,7 @@ export default function NewsArticlePage() {
               {related.map((rel, i) => {
                 const relTitle = (lang === 'en' && (rel as any).title_en) ? (rel as any).title_en : rel.title;
                 return (
-                  <Link key={rel.id} href={`/news/${rel.slug}`} className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-lg transition-all animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
+                  <Link key={rel.id} href={`/news/${encodeURIComponent(rel.slug)}`} className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-lg transition-all animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
                     <div className="aspect-[16/10] overflow-hidden bg-muted">
                       {rel.featured_image_url
                         ? <img src={rel.featured_image_url} alt={relTitle} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />

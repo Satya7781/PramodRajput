@@ -292,7 +292,7 @@ export default function EventsPage() {
                                 {events.map((ev, i) => (
                                   <Link
                                     key={ev.id}
-                                    href={`/events/${ev.slug}`}
+                                    href={`/events/${encodeURIComponent(ev.slug)}`}
                                     className="group flex gap-3 rounded-xl border border-border bg-card p-3 hover:border-primary/40 hover:shadow-md transition-all"
                                   >
                                     {ev.cover_url ? (
@@ -407,7 +407,7 @@ function EventCard({ event, lang, t, index }: { event: Event; lang: string; t: R
         <div className="mt-auto flex flex-col gap-2 pt-1">
           {regOpen ? (
             <Link
-              href={`/events/${event.slug}/register`}
+              href={`/events/${encodeURIComponent(event.slug)}/register`}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors"
             >
               {t('common', 'register')} <ArrowRight className="h-4 w-4" />
@@ -419,7 +419,7 @@ function EventCard({ event, lang, t, index }: { event: Event; lang: string; t: R
           )}
           {event.certificate_enabled && (
             <Link
-              href={`/events/${event.slug}/certificate`}
+              href={`/events/${encodeURIComponent(event.slug)}/certificate`}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
             >
               <CheckCircle2 className="h-4 w-4 text-amber-600" />

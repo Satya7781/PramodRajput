@@ -116,7 +116,7 @@ export default function EventCertificatePage() {
       <section className="py-12 sm:py-16 bg-secondary/5">
         <div className="container mx-auto px-4 lg:px-8 max-w-2xl">
           <Link
-            href={`/events/${slug}`}
+            href={`/events/${encodeURIComponent(slug)}`}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-5"
           >
             <ArrowLeft className="h-4 w-4" />

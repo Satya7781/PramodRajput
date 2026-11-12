@@ -196,7 +196,7 @@ export default function EventDetailPage() {
                           : 'Participants of this event can download their participation certificate.'}
                       </p>
                       <Link
-                        href={`/events/${ev.slug}/certificate`}
+                        href={`/events/${encodeURIComponent(ev.slug)}/certificate`}
                         className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-700 transition-colors"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -269,7 +269,7 @@ export default function EventDetailPage() {
                   )}
                   {regOpen ? (
                     <Link
-                      href={`/events/${ev.slug}/register`}
+                      href={`/events/${encodeURIComponent(ev.slug)}/register`}
                       className="flex items-center justify-center gap-2 w-full rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors"
                     >
                       {t('common','register')} <ArrowRight className="h-4 w-4" />

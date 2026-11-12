@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/date-utils';
 export default function HomePage() {
   const { lang, t } = useLanguage();
   const [events, setEvents] = useState<Event[]>([]);
+  const [pastEvents, setPastEvents] = useState<Event[]>([]);
   const [memories, setMemories] = useState<EventMemory[]>([]);
   const [news, setNews]     = useState<News[]>([]);
   const [ready, setReady]   = useState(false);
@@ -21,10 +22,12 @@ export default function HomePage() {
   useEffect(() => {
     Promise.allSettled([
       fetch('/api/events?status=upcoming&limit=3').then(r => r.ok ? r.json() : []),
+      fetch('/api/events?status=past&limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/memories?limit=3').then(r => r.ok ? r.json() : []),
       fetch('/api/news?limit=3').then(r => r.ok ? r.json() : []),
-    ]).then(([ev, mem, nw]) => {
+    ]).then(([ev, past, mem, nw]) => {
       setEvents(ev.status === 'fulfilled' && Array.isArray(ev.value) ? ev.value : []);
+      setPastEvents(past.status === 'fulfilled' && Array.isArray(past.value) ? past.value : []);
       setMemories(mem.status === 'fulfilled' && Array.isArray(mem.value) ? mem.value : []);
       setNews(nw.status === 'fulfilled' && Array.isArray(nw.value) ? nw.value : []);
       setReady(true);
@@ -217,7 +220,7 @@ export default function HomePage() {
               {events.map((event, i) => (
                 <Link
                   key={event.id}
-                  href={`/events/${event.slug}`}
+                  href={`/events/${encodeURIComponent(event.slug)}`}
                   className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
@@ -257,7 +260,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Past Events ── */}
-      {(!ready || memories.length > 0) && (
+      {(!ready || memories.length > 0 || pastEvents.length > 0) && (
         <section className="py-14 sm:py-20 bg-muted/30">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-end justify-between mb-8 sm:mb-10 gap-4">
@@ -285,27 +288,33 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                {memories.map((memory, i) => (
+                {[
+                  ...memories.map(memory => ({ kind: 'memory' as const, date: memory.event_date, memory })),
+                  ...pastEvents.map(event => ({ kind: 'event' as const, date: event.end_date || event.start_date, event })),
+                ]
+                  .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+                  .slice(0, 3)
+                  .map((item, i) => item.kind === 'memory' ? (
                   <Link
-                    key={memory.id}
-                    href={`/memories/${memory.slug}`}
+                    key={`memory-${item.memory.id}`}
+                    href={`/memories/${encodeURIComponent(item.memory.slug)}`}
                     className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
                     style={{ animationDelay: `${i * 80}ms` }}
                   >
                     <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                      {memory.cover_image_url
-                        ? <img src={memory.cover_image_url} alt={memory.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                      {item.memory.cover_image_url
+                        ? <img src={item.memory.cover_image_url} alt={item.memory.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                         : <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-10 w-10 text-muted-foreground/40" /></div>}
-                      {(memory.photo_count ?? 0) > 0 || (memory.video_count ?? 0) > 0 ? (
+                      {(item.memory.photo_count ?? 0) > 0 || (item.memory.video_count ?? 0) > 0 ? (
                         <div className="absolute bottom-2.5 right-2.5 flex gap-1.5">
-                          {(memory.photo_count ?? 0) > 0 && (
+                          {(item.memory.photo_count ?? 0) > 0 && (
                             <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
-                              <Camera className="h-3 w-3" />{memory.photo_count}
+                              <Camera className="h-3 w-3" />{item.memory.photo_count}
                             </span>
                           )}
-                          {(memory.video_count ?? 0) > 0 && (
+                          {(item.memory.video_count ?? 0) > 0 && (
                             <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
-                              <Video className="h-3 w-3" />{memory.video_count}
+                              <Video className="h-3 w-3" />{item.memory.video_count}
                             </span>
                           )}
                         </div>
@@ -313,13 +322,33 @@ export default function HomePage() {
                     </div>
                     <div className="p-4 sm:p-5">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2.5">
-                        {memory.event_date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{formatDate(memory.event_date, lang)}</span>}
-                        {memory.location && <span className="flex items-center gap-1 truncate max-w-[150px]"><MapPin className="h-3 w-3 shrink-0" />{memory.location}</span>}
+                        {item.memory.event_date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{formatDate(item.memory.event_date, lang)}</span>}
+                        {item.memory.location && <span className="flex items-center gap-1 truncate max-w-[150px]"><MapPin className="h-3 w-3 shrink-0" />{item.memory.location}</span>}
                       </div>
-                      <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{memory.title}</h3>
+                      <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.memory.title}</h3>
                     </div>
                   </Link>
-                ))}
+                  ) : (
+                    <Link
+                      key={`event-${item.event.id}`}
+                      href={`/events/${encodeURIComponent(item.event.slug)}`}
+                      className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
+                      style={{ animationDelay: `${i * 80}ms` }}
+                    >
+                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                        {item.event.banner_url
+                          ? <img src={item.event.banner_url} alt={item.event.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                          : <div className="h-full w-full flex items-center justify-center"><Calendar className="h-10 w-10 text-muted-foreground/40" /></div>}
+                      </div>
+                      <div className="p-4 sm:p-5">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2.5">
+                          {(item.event.end_date || item.event.start_date) && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{formatDate(item.event.end_date || item.event.start_date, lang)}</span>}
+                          {item.event.venue && <span className="flex items-center gap-1 truncate max-w-[150px]"><MapPin className="h-3 w-3 shrink-0" />{item.event.venue}</span>}
+                        </div>
+                        <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.event.title}</h3>
+                      </div>
+                    </Link>
+                  ))}
               </div>
             )}
 
@@ -363,7 +392,7 @@ export default function HomePage() {
               {news.map((article, i) => (
                 <Link
                   key={article.id}
-                  href={`/news/${article.slug}`}
+                  href={`/news/${encodeURIComponent(article.slug)}`}
                   className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
                   style={{ animationDelay: `${i * 80}ms` }}
                 >

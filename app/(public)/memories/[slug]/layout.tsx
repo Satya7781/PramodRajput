@@ -12,11 +12,20 @@ interface MemoryRecord {
   location: string | null;
 }
 
+function normalizeSlug(value: string): string {
+  let slug = value;
+  try { slug = decodeURIComponent(slug); } catch { /* keep the original value */ }
+  if (slug.includes('%')) {
+    try { slug = decodeURIComponent(slug); } catch { /* keep the first decode */ }
+  }
+  return slug;
+}
+
 async function getMemory(slug: string): Promise<MemoryRecord | null> {
   return queryOne<MemoryRecord>(
     `SELECT title, slug, description, cover_image_url, event_date, location
      FROM event_memories WHERE slug = $1 AND status = 'published'`,
-    [slug]
+    [normalizeSlug(slug)]
   );
 }
 

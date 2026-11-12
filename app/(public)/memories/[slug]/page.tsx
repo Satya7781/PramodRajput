@@ -29,7 +29,7 @@ export default function MemoryDetailPage() {
 
   useEffect(() => {
     if (!params?.slug) return;
-    fetch(`/api/memories/slug/${params.slug}`)
+    fetch(`/api/memories/slug/${encodeURIComponent(params.slug)}`)
       .then(r => { if (!r.ok) { setNotFound(true); setLoading(false); return null; } return r.json(); })
       .then(data => { if (data) setMemory(data); setLoading(false); })
       .catch(() => { setNotFound(true); setLoading(false); });

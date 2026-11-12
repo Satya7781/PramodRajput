@@ -155,7 +155,7 @@ export default function NewsPage() {
               {/* Featured */}
               {featured && (
                 <Link
-                  href={`/news/${featured.slug}`}
+                  href={`/news/${encodeURIComponent(featured.slug)}`}
                   className="group mb-8 sm:mb-10 grid grid-cols-1 sm:grid-cols-2 gap-0 rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 transition-all duration-200 animate-slide-up"
                 >
                   <div className="aspect-[16/10] sm:aspect-auto overflow-hidden bg-muted">
@@ -196,7 +196,7 @@ export default function NewsPage() {
                     return (
                       <Link
                         key={article.id}
-                        href={`/news/${article.slug}`}
+                        href={`/news/${encodeURIComponent(article.slug)}`}
                         className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
                         style={{ animationDelay: `${i * 60}ms` }}
                       >

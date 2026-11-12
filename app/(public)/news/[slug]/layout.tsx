@@ -12,11 +12,20 @@ interface NewsRecord {
   status: string;
 }
 
+function normalizeSlug(value: string): string {
+  let slug = value;
+  try { slug = decodeURIComponent(slug); } catch { /* keep the original value */ }
+  if (slug.includes('%')) {
+    try { slug = decodeURIComponent(slug); } catch { /* keep the first decode */ }
+  }
+  return slug;
+}
+
 async function getArticle(slug: string): Promise<NewsRecord | null> {
   return queryOne<NewsRecord>(
     `SELECT title, slug, excerpt, featured_image_url, published_at, status
      FROM news WHERE slug = $1 AND status = 'published'`,
-    [slug]
+    [normalizeSlug(slug)]
   );
 }
 

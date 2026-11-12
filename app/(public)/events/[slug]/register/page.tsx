@@ -53,7 +53,7 @@ export default function RegisterPage() {
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       <section className="bg-secondary/5 py-10 sm:py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <Link href={`/events/${event.slug}`} className="inline-flex items-center gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors mb-5 sm:mb-6">
+          <Link href={`/events/${encodeURIComponent(event.slug)}`} className="inline-flex items-center gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors mb-5 sm:mb-6">
             <ArrowLeft className="h-4 w-4" /> {t('events','backToEvent')}
           </Link>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">{t('events','regFor')}</h1>

@@ -118,7 +118,7 @@ export default function MemoriesPage() {
                     {byYear[year].map((memory, i) => (
                       <Link
                         key={memory.id}
-                        href={`/memories/${memory.slug}`}
+                        href={`/memories/${encodeURIComponent(memory.slug)}`}
                         className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
                         style={{ animationDelay: `${i * 60}ms` }}
                       >
