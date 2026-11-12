@@ -15,6 +15,7 @@ interface HomeGalleryEvent {
   id: string;
   year: number;
   name: string;
+  name_en: string | null;
   slug: string;
   description: string | null;
   cover_url: string | null;
@@ -302,13 +303,54 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {/* Featured gallery events always show first */}
+                {galleryEvents.length > 0 && (
+                  <>
+                    {galleryEvents.map((event, i) => (
+                      <Link
+                        key={`gallery-${event.id}`}
+                        href={`/events/${encodeURIComponent(event.slug)}`}
+                        className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
+                        style={{ animationDelay: `${i * 80}ms` }}
+                      >
+                        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                          {event.cover_url
+                            ? <img src={event.cover_url} alt={event.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                            : <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-10 w-10 text-muted-foreground/40" /></div>}
+                          {(Number(event.photo_count) > 0 || Number(event.video_count) > 0) && (
+                            <div className="absolute bottom-2.5 right-2.5 flex gap-1.5">
+                              {Number(event.photo_count) > 0 && (
+                                <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
+                                  <Camera className="h-3 w-3" />{event.photo_count}
+                                </span>
+                              )}
+                              {Number(event.video_count) > 0 && (
+                                <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
+                                  <Video className="h-3 w-3" />{event.video_count}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4 sm:p-5">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2.5">
+                            <Calendar className="h-3 w-3" />{event.year}
+                          </div>
+                          <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                            {lang === 'en' && event.name_en ? event.name_en : event.name}
+                          </h3>
+                        </div>
+                      </Link>
+                    ))}
+                  </>
+                )}
+                {/* Then memories and past live events */}
                 {[
                   ...memories.map(memory => ({ kind: 'memory' as const, date: memory.event_date, memory })),
                   ...pastEvents.map(event => ({ kind: 'event' as const, date: event.end_date || event.start_date, event })),
-                  ...galleryEvents.map(event => ({ kind: 'gallery' as const, date: `${event.year}-12-31`, event })),
                 ]
                   .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
-                  .slice(0, 3)
+                  .slice(0, Math.max(0, 6 - galleryEvents.length))
                   .map((item, i) => item.kind === 'memory' ? (
                   <Link
                     key={`memory-${item.memory.id}`}
@@ -364,38 +406,7 @@ export default function HomePage() {
                       </div>
                     </Link>
                   ) : (
-                    <Link
-                      key={`gallery-${item.event.id}`}
-                      href={`/events/${encodeURIComponent(item.event.slug)}`}
-                      className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
-                      style={{ animationDelay: `${i * 80}ms` }}
-                    >
-                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                        {item.event.cover_url
-                          ? <img src={item.event.cover_url} alt={item.event.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                          : <div className="h-full w-full flex items-center justify-center"><ImageIcon className="h-10 w-10 text-muted-foreground/40" /></div>}
-                        {(Number(item.event.photo_count) > 0 || Number(item.event.video_count) > 0) && (
-                          <div className="absolute bottom-2.5 right-2.5 flex gap-1.5">
-                            {Number(item.event.photo_count) > 0 && (
-                              <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
-                                <Camera className="h-3 w-3" />{item.event.photo_count}
-                              </span>
-                            )}
-                            {Number(item.event.video_count) > 0 && (
-                              <span className="flex items-center gap-1 rounded-full bg-black/65 backdrop-blur-sm text-white text-xs px-2 py-0.5 font-medium">
-                                <Video className="h-3 w-3" />{item.event.video_count}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4 sm:p-5">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2.5">
-                          <Calendar className="h-3 w-3" />{item.event.year}
-                        </div>
-                        <h3 className="text-sm sm:text-base font-bold group-hover:text-primary transition-colors line-clamp-2 leading-snug">{item.event.name}</h3>
-                      </div>
-                    </Link>
+                    null
                   ))}
               </div>
             )}
