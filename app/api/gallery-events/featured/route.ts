@@ -3,9 +3,16 @@ import { ok, err } from '@/lib/api-helpers';
 import { query } from '@/lib/db';
 
 // GET /api/gallery-events/featured — public
-// Returns gallery events marked as featured (shown on homepage as Past Events)
+// Returns gallery events marked as featured (shown on homepage as Past Events).
+// Auto-creates the is_featured column if the migration hasn't been run yet.
 export async function GET(_req: NextRequest) {
   try {
+    // Ensure column exists — safe no-op if already present
+    await query(
+      `ALTER TABLE gallery_events ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE`,
+      []
+    );
+
     const events = await query(
       `SELECT ge.id, ge.year, ge.name, ge.name_en, ge.slug,
               ge.description, ge.description_en, ge.cover_url, ge.is_featured,
